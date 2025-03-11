@@ -1,44 +1,51 @@
 from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import render
-
-# Create your views here.
-menu = [
-    {'title': 'Список пользователей', 'url_name': 'users'},
-    {'title': 'Войти', 'url_name': 'login'},
-
-]
+from .models import File
+from rest_framework import viewsets
+from .serializers import FileSerializer
 
 
-def index(request):
-    data = {
-        'title': 'Главная страница',
-        'menu': menu,
-        # 'posts': data_db,
-    }
-    return render(request, 'storage/index.html', context=data)
+class FileViewSet(viewsets.ModelViewSet):
+    queryset = File.objects.all()
+    serializer_class = FileSerializer
+# # Create your views here.
+# menu = [
+#     {'title': 'Список пользователей', 'url_name': 'users'},
+#     {'title': 'Войти', 'url_name': 'login'},
+
+# ]
 
 
-# def users(request, user_id):
-#     return HttpResponse(f'Страници приложения Storage<p>ID: {user_id}')
-
-def users_slug(request, user_slug):
-    return HttpResponse(f'Страници приложения Storage<p>Slug: {user_slug}')
-
-
-def show_post(request, post_id):
-    return HttpResponse(f"Отображение статьи с id = {post_id}")
+# def index(request):
+#     data = {
+#         'title': 'Главная страница',
+#         'menu': menu,
+#         # 'posts': data_db,
+#     }
+#     return render(request, 'storage/index.html', context=data)
 
 
-def login(request):
-    return HttpResponse("Авторизация")
+# # def users(request, user_id):
+# #     return HttpResponse(f'Страници приложения Storage<p>ID: {user_id}')
+
+# def users_slug(request, user_slug):
+#     return HttpResponse(f'Страници приложения Storage<p>Slug: {user_slug}')
 
 
-def page_not_found(request, exception):
-    HttpResponseNotFound('<h1>Страница не найдена</h1>')
+# def show_post(request, post_id):
+#     return HttpResponse(f"Отображение статьи с id = {post_id}")
 
 
-def addpage(request):
-    return HttpResponse("Добавление файлов")
+# def login(request):
+#     return HttpResponse("Авторизация")
+
+
+# def page_not_found(request, exception):
+#     HttpResponseNotFound('<h1>Страница не найдена</h1>')
+
+
+# def addpage(request):
+#     return HttpResponse("Добавление файлов")
 
 # def page_not_found500(request, *args, **argv):
 #     HttpResponseNotFound('<h1>Страница не найдена</h1>')
