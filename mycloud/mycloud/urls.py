@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from storage.views import page_not_found
+# from storage.views import page_not_found
 
 
 urlpatterns = [
@@ -18,5 +18,5 @@ if settings.DEBUG:
     )
 
 
-handler404 = page_not_found
+# handler404 = page_not_found
 # handler500 = page_not_found500

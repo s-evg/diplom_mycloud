@@ -18,3 +18,6 @@ class File(models.Model):
     slug = models.SlugField(max_length=250)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="files")
+
+    def __str__(self):
+        return self.title
