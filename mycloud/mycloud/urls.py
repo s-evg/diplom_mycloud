@@ -9,6 +9,8 @@ from django.urls import include, path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('storage.urls')),
+    # Авторизация DRF
+    path('api/v1/auth/', include('rest_framework.urls')),
 ]
 
 # Возмодность раздавать файлы в режиме отладки
