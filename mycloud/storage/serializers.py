@@ -9,4 +9,4 @@ class FileSerializer(serializers.ModelSerializer):
     class Meta:
         model = File
         fields = ['id', 'file', 'comment', 'size', 'link_download',
-                  'published', 'lastload', 'slug', 'user']
+                  'published', 'lastload', 'slug', 'user', 'owner']

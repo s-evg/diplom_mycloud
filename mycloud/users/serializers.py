@@ -6,20 +6,30 @@ from storage.models import File
 
 
 class UserSerializer(serializers.ModelSerializer):
-    files = serializers.SerializerMethodField(source=File.objects.all())
+    # files = serializers.SerializerMethodField(source=File.objects.all())
 
     class Meta:
         model = User
         # Для теста выводим максимальное количество полей для понимания, что все поля из AbstractUser подтягиваются
         fields = ['id', 'last_login', 'username', 'password',
                   'email', 'is_staff', 'is_authenticated', 'slug', 'files']
-        print(fields)
+        # print(fields)
+        # fields = ['username', 'first_name',
+        #           'last_name', 'email', 'date_joined']
 
 
-@api_view(['POST'])
-def register_user(request):
-    serializer = UserSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
-        return Response({"message": "Пользователь успешно создан"})
-    return Response(serializer.errors, status=400)
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password']
+
+    def create(self, validated_data):
+        user = User(
+            username=validated_data['username'],
+            email=validated_data['email']
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user

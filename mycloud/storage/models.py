@@ -16,7 +16,7 @@ class File(models.Model):
     published = models.DateTimeField(auto_now_add=True)
     lastload = models.DateTimeField(auto_now=True)
     slug = models.SlugField(max_length=250)
-    user = models.ForeignKey(
+    owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="files")
 
     def __str__(self):

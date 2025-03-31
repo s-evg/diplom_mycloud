@@ -1,51 +1,119 @@
 from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import render
 from .models import File
+# from ..users.models import User
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
 from rest_framework import viewsets
 from .serializers import FileSerializer
+from users.serializers import UserRegistrationSerializer
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+# JWT Token получаем токен доступа, и обновляемый токен
 
 
-class FileViewSet(viewsets.ModelViewSet):
-    queryset = File.objects.all()
-    serializer_class = FileSerializer
-# # Create your views here.
-# menu = [
-#     {'title': 'Список пользователей', 'url_name': 'users'},
-#     {'title': 'Войти', 'url_name': 'login'},
+class CustomTokenObtainPairView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
 
-# ]
+        try:
+            response = super().post(request, *args, **kwargs)
+            tokens = response.data
+            access_token = tokens['access']
+            refresh_token = tokens['refresh']
+            res = Response()
+            res.data = {'success': True}
 
+            res.set_cookie(
+                key="access_token",
+                value=access_token,
+                httponly=True,
+                secure=True,
+                samesite='None',
+                path='/'
+            )
 
-# def index(request):
-#     data = {
-#         'title': 'Главная страница',
-#         'menu': menu,
-#         # 'posts': data_db,
-#     }
-#     return render(request, 'storage/index.html', context=data)
+            res.set_cookie(
+                key="refresh_token",
+                value=refresh_token,
+                httponly=True,
+                secure=True,
+                samesite='None',
+                path='/'
+            )
 
+            return res
 
-# # def users(request, user_id):
-# #     return HttpResponse(f'Страници приложения Storage<p>ID: {user_id}')
+        except:
+            return Response({'success': False})
 
-# def users_slug(request, user_slug):
-#     return HttpResponse(f'Страници приложения Storage<p>Slug: {user_slug}')
-
-
-# def show_post(request, post_id):
-#     return HttpResponse(f"Отображение статьи с id = {post_id}")
-
-
-# def login(request):
-#     return HttpResponse("Авторизация")
-
-
-# def page_not_found(request, exception):
-#     HttpResponseNotFound('<h1>Страница не найдена</h1>')
+# Получаем токен обновления
 
 
-# def addpage(request):
-#     return HttpResponse("Добавление файлов")
+class CustomRefreshTokenView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        try:
+            # Получаем текущий токен обновления
+            refresh_token = request.COOKIES.get('refresh_token')
+            request.data['refresh'] = refresh_token
+            # Отправляем текущий токен обновления для получения нового токена обновлений
+            response = super().post(request, *args, **kwargs)
+            # Наши токены
+            tokens = response.data
+            # токен доступа
+            access_token = tokens['access']
+            res = Response()
+            res.data = {'refreshed': True}
+            # устанвливаем в куки новый токен доступа с
+            res.set_cookie(
+                key="access_token",
+                value=access_token,
+                httponly=True,
+                secure=True,
+                samesite='None',
+                path='/'
+            )
 
-# def page_not_found500(request, *args, **argv):
-#     HttpResponseNotFound('<h1>Страница не найдена</h1>')
+            return res
+        except:
+            return Response({'refreshed': False})
+
+
+@api_view(['POST'])
+def logout(request):
+    try:
+        res = Response()
+        res.data = {'success': True}
+        res.delete_cookie('access_token', path='/', samesite='None')
+        res.delete_cookie('refresh_token', path='/', samesite='None')
+        return res
+    except:
+        return Response({'success': False})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def is_authenticated(request):
+    return Response({'authenticated': True})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register(request):
+    serializer = UserRegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.error)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_files(request):
+    user = request.user
+    files = File.objects.filter(owner=user)
+    serializer = FileSerializer(files, many=True)
+    return Response(serializer.data)

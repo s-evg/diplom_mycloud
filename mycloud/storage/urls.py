@@ -1,13 +1,11 @@
-from django.contrib import admin
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
-from .views import FileViewSet
-
-router = DefaultRouter()
-router.register(r'files', FileViewSet, basename='files')
+from django.urls import path
+from .views import get_files, CustomTokenObtainPairView, CustomRefreshTokenView, logout, is_authenticated, register
 
 urlpatterns = [
-    # path('admin/', admin.site.urls),
-    path('api/v1/', include(router.urls)),
-    path('api/v1/auth/', include('rest_framework.urls')),
+    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', CustomRefreshTokenView.as_view(), name='token_refresh'),
+    path('files/', get_files),
+    path('logout/', logout),
+    path('authenticated/', is_authenticated),
+    path('register/', register),
 ]
