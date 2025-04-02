@@ -3,10 +3,14 @@ from .models import File
 
 
 class FileSerializer(serializers.ModelSerializer):
-    # Скрываем поле выбора/ввода пользователя от чьего имени мы добавляем файлы
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    download_url = serializers.SerializerMethodField()
 
     class Meta:
         model = File
-        fields = ['id', 'file', 'comment', 'size', 'link_download',
-                  'published', 'lastload', 'slug', 'user', 'owner']
+        fields = ['id', 'name', 'file_type', 'size', 'comment',
+                  'published', 'last_download', 'is_public',
+                  'link_download', 'download_url', 'user']
+        read_only_fields = ['user']
+
+    def get_download_url(self, obj):
+        return obj.get_absolute_url()

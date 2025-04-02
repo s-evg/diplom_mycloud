@@ -1,35 +1,58 @@
-from rest_framework import serializers, views
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 from .models import User
-from storage.models import File
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 
 class UserSerializer(serializers.ModelSerializer):
-    # files = serializers.SerializerMethodField(source=File.objects.all())
+    storage_stats = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        # Для теста выводим максимальное количество полей для понимания, что все поля из AbstractUser подтягиваются
-        fields = ['id', 'last_login', 'username', 'password',
-                  'email', 'is_staff', 'is_authenticated', 'slug', 'files']
-        # print(fields)
-        # fields = ['username', 'first_name',
-        #           'last_name', 'email', 'date_joined']
+        fields = ['id', 'username', 'email', 'is_admin', 'storage_stats']
+        read_only_fields = ['is_admin']
+
+    def get_storage_stats(self, obj):
+        return obj.storage_stats
 
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+class UserRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        validators=[validate_password],
+        min_length=8,
+        error_messages={
+            'min_length': 'Пароль должен содержать минимум 8 символов',
+            'password_too_common': 'Пароль слишком распространён'
+        }
+    )
+    password2 = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'email', 'password', 'password2']
+        extra_kwargs = {
+            'username': {
+                'error_messages': {
+                    'unique': 'unique_username'  # Специальный код ошибки
+                }
+            },
+            'email': {
+                'error_messages': {
+                    'unique': 'unique_email'  # Специальный код ошибки
+                }
+            }
+        }
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({
+                "password": ["Пароли не совпадают"]
+            })
+        return attrs
 
     def create(self, validated_data):
-        user = User(
-            username=validated_data['username'],
-            email=validated_data['email']
-        )
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
+        validated_data.pop('password2')
+        return User.objects.create_user(**validated_data)

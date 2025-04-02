@@ -1,25 +1,24 @@
-import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ChakraProvider } from '@chakra-ui/react';
-import { Login } from './components/Login/Login';
-import { Menu } from './components/Menu/Menu';
-import { AuthProvider } from './contexts/useAuth';
-import { PrivateRoute } from './components/PrivateRoute/PrivateRoute'
-import { Register } from './components/Register/Register';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Admin from './pages/Admin';
+import Storage from './pages/Storage';
+
 function App() {
   return (
-    <ChakraProvider>
-      <Router>
-        <AuthProvider>
-          <Routes>
-            <Route path='/login' element={<Login/>} />;
-            <Route path='/register' element={<Register/>} />;
-            <Route path='/' element={<PrivateRoute> <Menu /> </PrivateRoute>} />;
-          </Routes>
-          </AuthProvider>
-      </Router>
-    </ChakraProvider>
-
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="admin" element={<Admin />} />
+          <Route path="storage" element={<Storage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
