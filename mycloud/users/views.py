@@ -1,3 +1,4 @@
+from rest_framework import status
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
@@ -85,14 +86,21 @@ class CurrentUserView(APIView):
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
+
         if response.status_code == 200:
+            # Получаем пользователя через сериализатор
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user = serializer.user
+
             return Response({
                 'access': response.data['access'],
                 'refresh': response.data['refresh'],
                 'user': {
-                    'id': self.user.id,
-                    'username': self.user.username,
-                    'is_admin': self.user.is_admin
+                    'id': user.id,
+                    'username': user.username,
+                    'is_admin': user.is_admin
                 }
             }, status=status.HTTP_200_OK)
+
         return response

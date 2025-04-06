@@ -6,35 +6,40 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [cookies, setCookie, removeCookie] = useCookies(["token"]);
+  const [cookies, setCookie, removeCookie] = useCookies(["access", "refresh"]);
 
   useEffect(() => {
-    if (cookies.token) {
+    if (cookies.access) {
       axios
         .get("/api/auth/user/", {
-          headers: { Authorization: `Bearer ${cookies.token}` },
+          headers: { Authorization: `Bearer ${cookies.access}` },
         })
         .then((response) => setUser(response.data))
         .catch(() => logout());
     }
-  }, [cookies.token]);
+  }, [cookies.access]);
 
   const login = async (username, password) => {
     try {
-      const response = await axios.post("/api/auth/login/", {
+      const response = await axios.post("/api/auth/token/", {
         username,
         password,
       });
-      setCookie("token", response.data.access, { path: "/" });
+
+      setCookie("access", response.data.access, { path: "/" });
+      setCookie("refresh", response.data.refresh, { path: "/" });
       setUser(response.data.user);
+
       return true;
-    } catch {
+    } catch (error) {
+      console.error("Login error:", error);
       return false;
     }
   };
 
   const logout = () => {
-    removeCookie("token");
+    removeCookie("access", { path: "/" });
+    removeCookie("refresh", { path: "/" });
     setUser(null);
   };
 
@@ -45,7 +50,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Кастомный хук для удобного использования контекста
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
