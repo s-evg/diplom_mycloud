@@ -5,7 +5,8 @@ import {
 } from "@chakra-ui/react";
 // import axios from "axios";
 import api from '../api/api';
-import { useAuth } from "../contexts/AuthContext";
+// import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../providers/AuthProvider";
 import { useNavigate } from "react-router-dom";
 
 const StoragePage = () => {

@@ -3,7 +3,10 @@ import { login as apiLogin, getCurrentUser } from '../api/auth';
 
 const AuthContext = createContext();
 
-
+// Кастомный хук для использования контекста
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -11,24 +14,35 @@ export function AuthProvider({ children }) {
 
   // Инициализация при загрузке
   useEffect(() => {
-    const userData = getCurrentUser();
-    if (userData) {
-      setUser(userData);
+    try {
+      const userData = getCurrentUser();
+      if (userData) {
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки данных пользователя', error);
+    } finally {
+      setIsInitialized(true);
     }
-    setIsInitialized(true);
   }, []);
 
   const login = async (credentials) => {
-    const data = await apiLogin(credentials);
-    setUser(data.user);
-    return data;
+    try {
+      const data = await apiLogin(credentials);  // Запрос на логин
+      setUser(data.user);  // Сохраняем данные пользователя
+      return data;
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;  // Бросаем ошибку для обработки в компоненте
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('auth');
-    setUser(null);
+    localStorage.removeItem('auth');  // Удаляем токены из localStorage
+    setUser(null);  // Сбрасываем состояние пользователя
   };
 
+  // Если данные еще не загружены, показываем индикатор загрузки
   if (!isInitialized) {
     return <div>Загрузка...</div>;
   }
@@ -38,8 +52,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

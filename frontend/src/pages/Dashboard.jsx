@@ -1,4 +1,5 @@
-import { useAuth } from "../contexts/AuthContext";
+// import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../providers/AuthProvider";
 import { Button, Heading, VStack } from "@chakra-ui/react";
 
 const Dashboard = () => {
