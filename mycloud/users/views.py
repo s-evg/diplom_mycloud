@@ -1,3 +1,4 @@
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework import status
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -6,6 +7,10 @@ from rest_framework.views import APIView
 from .models import User
 from .serializers import UserSerializer, UserRegisterSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AdminUserListView(generics.ListCreateAPIView):
@@ -61,6 +66,7 @@ class RegisterView(generics.CreateAPIView):
             )
 
         self.perform_create(serializer)
+
         return Response(
             {"success": "Регистрация прошла успешно!"},
             status=status.HTTP_201_CREATED
@@ -68,30 +74,44 @@ class RegisterView(generics.CreateAPIView):
 
 
 class CurrentUserView(APIView):
-    """
-    API endpoint для получения данных текущего пользователя
-    """
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        return Response({
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'is_admin': user.is_admin
-        })
+        # print("Authorization header:", request.META.get('HTTP_AUTHORIZATION'))
+        print("Auth header:", request.META.get("HTTP_AUTHORIZATION"))
+        print("User ID:", request.user.id)
+        try:
+            user = request.user
+            logger.info(f'User {user.username} is authenticated.')
+            return Response({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+            })
+        except (InvalidToken, TokenError) as e:
+            logger.error(f'Token error: {str(e)}')
+            return Response({'error': 'Invalid token or expired'}, status=401)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
+        print("Token generation started")  # Печатаем начало процесса
+
         response = super().post(request, *args, **kwargs)
+
+        # Печатаем, что приходит в response
+        # print(f"Response after token generation: {response.data}")
 
         if response.status_code == 200:
             # Получаем пользователя через сериализатор
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = serializer.user
+
+            # Печатаем токены в консоль
+            print(f"Access Token: {response.data['access']}")
+            print(f"Refresh Token: {response.data['refresh']}")
 
             return Response({
                 'access': response.data['access'],
@@ -103,4 +123,5 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 }
             }, status=status.HTTP_200_OK)
 
+        print(f"Response status code: {response.status_code}")
         return response

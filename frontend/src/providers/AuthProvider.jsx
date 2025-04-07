@@ -3,7 +3,9 @@ import { login as apiLogin, getCurrentUser } from '../api/auth';
 
 const AuthContext = createContext();
 
-export default function AuthProvider({ children }) {
+
+
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
 

@@ -1,4 +1,5 @@
-import axios from 'axios';
+// import axios from 'axios';
+import axios from './api';
 import { authHeader } from './auth';
 
 const API_URL = 'http://localhost:8000/api/admin';

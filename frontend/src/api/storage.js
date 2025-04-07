@@ -1,4 +1,5 @@
-import axios from 'axios';
+// import axios from 'axios';
+import api from './api';
 import { authHeader } from './auth';
 
 const API_URL = 'http://localhost:8000/api/storage';
@@ -17,7 +18,7 @@ export const uploadFile = (file, comment, isPublic) => {
   formData.append('comment', comment);
   formData.append('is_public', isPublic);
   
-  return axios.post(`${API_URL}/files/`, formData, {
+  return api.post(`${API_URL}/files/`, formData, {
     headers: {
       ...authHeader(),
       'Content-Type': 'multipart/form-data'
@@ -32,7 +33,7 @@ export const deleteFile = (id) => {
 };
 
 export const updateFile = (id, data) => {
-  return axios.patch(`${API_URL}/files/${id}/`, data, {
+  return api.patch(`${API_URL}/files/${id}/`, data, {
     headers: authHeader()
   });
 };

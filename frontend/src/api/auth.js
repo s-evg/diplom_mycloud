@@ -1,8 +1,7 @@
-import axios from 'axios';
+import api from './api';
 
 const API_URL = 'http://localhost:8000/api/auth';
 
-// Все ваши старые экспорты остаются как были
 export const register = async (userData) => {
   try {
     const response = await axios.post(`${API_URL}/register/`, userData);
@@ -13,25 +12,18 @@ export const register = async (userData) => {
   }
 };
 
+
 export const login = async (credentials) => {
   try {
-    const response = await axios.post(`${API_URL}/token/`, credentials);
-    
+    const response = await api.post(`${API_URL}/token/`, credentials);
+    console.log('Response from /auth/token/:', response.data);
+    // const response = await api.post('/auth/token/', credentials);
+
     if (!response.data?.access) {
       throw new Error('Не удалось получить токен');
     }
 
-    // Добавляем получение данных пользователя
-    const userResponse = await axios.get(`${API_URL}/user/`, {
-      headers: { Authorization: `Bearer ${response.data.access}` }
-    });
-
-    // Сохраняем ВСЕ данные вместе
-    const authData = {
-      ...response.data,
-      user: userResponse.data
-    };
-    
+    const authData = response.data;
     localStorage.setItem('auth', JSON.stringify(authData));
     return authData;
 
@@ -40,6 +32,7 @@ export const login = async (credentials) => {
     throw new Error(err.response?.data?.detail || 'Ошибка авторизации');
   }
 };
+
 
 export const logout = () => {
   localStorage.removeItem('auth');
@@ -58,3 +51,76 @@ export const authHeader = () => {
   }
   return {};
 };
+
+export const refreshToken = async () => {
+  const authData = localStorage.getItem('auth');
+  if (!authData) throw new Error('Нет refresh токена');
+
+  const { refresh } = JSON.parse(authData);
+  const response = await api.post('/auth/token/refresh/', { refresh });
+  return response.data;
+};
+
+
+// import axios from 'axios';
+
+// const API_URL = 'http://localhost:8000/api/auth';
+
+// // Все ваши старые экспорты остаются как были
+// export const register = async (userData) => {
+//   try {
+//     const response = await axios.post(`${API_URL}/register/`, userData);
+//     return response.data;
+//   } catch (error) {
+//     console.error('Registration error:', error.response?.data);
+//     throw error;
+//   }
+// };
+
+// export const login = async (credentials) => {
+//   try {
+//     const response = await axios.post(`${API_URL}/token/`, credentials);
+//     console.log('Access token:', response.data.access);
+//     if (!response.data?.access) {
+//       throw new Error('Не удалось получить токен');
+//     }
+
+//     // Добавляем получение данных пользователя
+    
+
+//     const userResponse = await axios.get(`${API_URL}/user/`, {
+//       headers: { Authorization: `Bearer ${response.data.access}` }
+//     });
+
+//     // Сохраняем ВСЕ данные вместе
+//     const authData = {
+//       ...response.data,
+//       user: userResponse.data
+//     };
+    
+//     localStorage.setItem('auth', JSON.stringify(authData));
+//     return authData;
+
+//   } catch (err) {
+//     console.error('Login error:', err);
+//     throw new Error(err.response?.data?.detail || 'Ошибка авторизации');
+//   }
+// };
+
+// export const logout = () => {
+//   localStorage.removeItem('auth');
+// };
+
+// export const getCurrentUser = () => {
+//   const authData = localStorage.getItem('auth');
+//   return authData ? JSON.parse(authData).user : null;
+// };
+
+// export const authHeader = () => {
+//   const authData = localStorage.getItem('auth');
+//   if (authData) {
+//     const { access } = JSON.parse(authData);
+//     return { Authorization: `Bearer ${access}` };
+//   }
+//   return {};
+// };

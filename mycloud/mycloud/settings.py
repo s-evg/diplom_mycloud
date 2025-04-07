@@ -27,8 +27,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'storage.apps.StorageConfig',
-    'users.apps.UsersConfig',
+    'users',
+    'storage',
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
@@ -147,9 +147,9 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_RENDERER_CLASSES': [
-        # 'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.JSONRenderer',
         # Запрет на работу с API в браузере в продакшне
-        'rest_framework.renderers.BrowsableAPIRenderer',
+        # 'rest_framework.renderers.BrowsableAPIRenderer',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -157,12 +157,16 @@ REST_FRAMEWORK = {
 
 }
 
-ROTATE_REFRESH_TOKENS: True
-BLACKLIST_AFTER_ROTATION: True
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': False,
+    'AUTH_COOKIE': None,  # Отключаем куки
+    'AUTH_COOKIE_HTTP_ONLY': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 LOGGING = {
@@ -198,8 +202,4 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
-]
-
-AUTH_PASSWORD_VALIDATORS = [
-    # стандартные валидаторы Django
 ]

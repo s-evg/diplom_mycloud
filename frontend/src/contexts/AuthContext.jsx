@@ -1,53 +1,50 @@
-import { createContext, useState, useEffect, useContext } from "react";
-import { useCookies } from "react-cookie";
-import axios from "axios";
+import { createContext, useState, useContext, useEffect } from 'react';
+import { login as apiLogin, getCurrentUser } from '../api/auth';
 
-export const AuthContext = createContext();
+const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
+// Кастомный хук для использования контекста
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [cookies, setCookie, removeCookie] = useCookies(["access", "refresh"]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Инициализация при загрузке
   useEffect(() => {
-    if (cookies.access) {
-      axios
-        .get("/api/auth/user/", {
-          headers: { Authorization: `Bearer ${cookies.access}` },
-        })
-        .then((response) => setUser(response.data))
-        .catch(() => logout());
+    const userData = getCurrentUser();
+    if (userData) {
+      setUser(userData);
     }
-  }, [cookies.access]);
+    setIsInitialized(true);
+  }, []);
 
-  const login = async (username, password) => {
+  const login = async (credentials) => {
     try {
-      const response = await axios.post("/api/auth/token/", {
-        username,
-        password,
-      });
-
-      setCookie("access", response.data.access, { path: "/" });
-      setCookie("refresh", response.data.refresh, { path: "/" });
-      setUser(response.data.user);
-
-      return true;
+      const data = await apiLogin(credentials);  // Запрос на логин
+      setUser(data.user);  // Сохраняем данные пользователя
+      return data;
     } catch (error) {
-      console.error("Login error:", error);
-      return false;
+      console.error("Login failed:", error);
+      throw error;  // Бросаем ошибку для обработки в компоненте
     }
   };
 
   const logout = () => {
-    removeCookie("access", { path: "/" });
-    removeCookie("refresh", { path: "/" });
-    setUser(null);
+    localStorage.removeItem('auth');  // Удаляем токены из localStorage
+    setUser(null);  // Сбрасываем состояние пользователя
   };
+
+  // Если данные еще не загружены, показываем индикатор загрузки
+  if (!isInitialized) {
+    return <div>Загрузка...</div>;
+  }
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => useContext(AuthContext);
+}

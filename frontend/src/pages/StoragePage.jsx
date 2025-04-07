@@ -3,7 +3,8 @@ import {
   Box, Heading, Button, VStack, Text, Spinner, 
   useToast, Input, FormControl, FormLabel, Textarea, HStack 
 } from "@chakra-ui/react";
-import axios from "axios";
+// import axios from "axios";
+import api from '../api/api';
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -29,7 +30,7 @@ const StoragePage = () => {
 
   const fetchFiles = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/storage/files/`, {
+      const response = await api.get(`${import.meta.env.VITE_API_URL}/storage/files/`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setFiles(response.data);
@@ -58,7 +59,7 @@ const StoragePage = () => {
     formData.append("file", file);
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/storage/files/`, formData, {
+      await api.post(`${import.meta.env.VITE_API_URL}/storage/files/`, formData, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "multipart/form-data",
@@ -76,7 +77,7 @@ const StoragePage = () => {
 
   const deleteFile = async (fileId) => {
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/storage/files/${fileId}/`, {
+      await api.delete(`${import.meta.env.VITE_API_URL}/storage/files/${fileId}/`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       toast({ title: "Файл удалён", status: "success", duration: 3000, isClosable: true });
@@ -102,7 +103,7 @@ const StoragePage = () => {
     if (!editingFile) return;
 
     try {
-      await axios.patch(
+      await api.patch(
         `${import.meta.env.VITE_API_URL}/storage/files/${editingFile.id}/`,
         { name: editedName, comment: editedComment },
         { headers: { Authorization: `Bearer ${accessToken}` } }
