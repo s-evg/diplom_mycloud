@@ -1,5 +1,5 @@
 // import axios from 'axios';
-import axios from './api';
+import api from './api';
 import { authHeader } from './auth';
 
 const API_URL = 'http://localhost:8000/api/admin';
@@ -8,7 +8,7 @@ const API_URL = 'http://localhost:8000/api/admin';
 export const getUsers = async () => {
   try {
     // Отправляем GET-запрос к API с авторизационными заголовками
-    const response = await axios.get(`${API_URL}/users/`, {
+    const response = await api.get(`${API_URL}/users/`, {
       headers: authHeader()
     });
     return response.data;
@@ -22,7 +22,7 @@ export const getUsers = async () => {
 export const updateUser = async (userId, userData) => {
   try {
     // Отправляем PATCH-запрос для обновления пользователя
-    const response = await axios.patch(
+    const response = await api.patch(
       `${API_URL}/users/${userId}/`,
       userData,
       {
@@ -40,7 +40,7 @@ export const updateUser = async (userId, userData) => {
 export const deleteUser = async (userId) => {
   try {
     // Отправляем DELETE-запрос для удаления пользователя
-    await axios.delete(`${API_URL}/users/${userId}/`, {
+    await api.delete(`${API_URL}/users/${userId}/`, {
       headers: authHeader()
     });
   } catch (error) {

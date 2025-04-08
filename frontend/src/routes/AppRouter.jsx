@@ -7,15 +7,19 @@ import StoragePage from "../pages/StoragePage";
 import ProfilePage from "../pages/ProfilePage";
 import NotFoundPage from "../pages/NotFoundPage";
 
-// Защищённый маршрут (PrivateRoute): доступ только для авторизованных пользователей
-const PrivateRoute = ({ children }) => {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/login" />;
-};
+// Защищённый маршрут: показывает children только если пользователь есть и авторизация завершена
+// const PrivateRoute = ({ children }) => {
+//   const { accessToken, isInitialized } = useAuth(); // Проверка токена вместо user
+//   if (!isInitialized) return <Spinner />; // Можно показать индикатор загрузки, пока токен не получен
+//   console.log("Access Token:", accessToken);
+//   console.log("User:", user);
+//   return accessToken ? children : <Navigate to="/login" replace />;
+// };
 
-// Открытый маршрут (PublicRoute): доступ только для неавторизованных пользователей
+// Открытый маршрут: если авторизован — редирект, если нет — показывает children
 const PublicRoute = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isInitialized } = useAuth();
+  if (!isInitialized) return null;
   return user ? <Navigate to="/storage" replace /> : children;
 };
 
@@ -23,18 +27,11 @@ const AppRouter = () => {
   return (
     <Router>
       <Routes>
-        {/* Открытые маршруты */}
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-
-        {/* Закрытые маршруты */}
         <Route path="/storage" element={<PrivateRoute><StoragePage /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-
-        {/* Главная страница, которая редиректит на /storage */}
         <Route path="/" element={<Navigate to="/storage" />} />
-
-        {/* Страница 404, если маршрут не найден */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>

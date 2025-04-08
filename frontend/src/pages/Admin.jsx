@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getUsers } from '../api/admin';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../providers/AuthProvider';
 
 export default function Admin() {
   const [users, setUsers] = useState([]);

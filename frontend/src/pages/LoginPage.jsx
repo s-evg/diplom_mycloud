@@ -1,78 +1,70 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Box, Button, Input, FormControl,
-  FormLabel, Heading, VStack, Text,
-} from "@chakra-ui/react";
-import { useAuth } from "../providers/AuthProvider";
-import { login as loginApi, getCurrentUser } from "../api/auth";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { login, getCurrentUser } from '../api/auth';
+import { useAuth } from '../providers/AuthProvider';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { user, setUser } = useAuth(); // получаем user и setUser из контекста
+  const { setUser } = useAuth();  // Теперь setUser будет доступен
 
-  const [formData, setFormData] = useState({ username: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+  });
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setError('');
 
     try {
-      await loginApi(formData);
+      await login(formData);
       const userData = await getCurrentUser();
-      setUser(userData);
-      navigate("/storage");
+      setUser(userData);  // Теперь setUser должен работать
+      navigate('/storage');
     } catch (err) {
-      setError(err.message || "Ошибка входа");
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Ошибка входа');
     }
   };
 
-  useEffect(() => {
-    if (user && window.location.pathname !== "/storage") {
-      navigate("/storage");
-    }
-  }, [user, navigate]);
-  
-
   return (
-    <Box maxW="400px" mx="auto" mt="100px" p="6" boxShadow="md" borderRadius="md">
-      <Heading size="lg" textAlign="center" mb={4}>Вход</Heading>
+    <div className="login-page">
+      <h2>Вход</h2>
       <form onSubmit={handleSubmit}>
-        <VStack spacing={4}>
-          <FormControl isRequired>
-            <FormLabel>Логин</FormLabel>
-            <Input
-              name="username"
-              type="text"
-              value={formData.username}
-              onChange={handleChange}
-            />
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Пароль</FormLabel>
-            <Input
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-            />
-          </FormControl>
-          {error && <Text color="red.500">{error}</Text>}
-          <Button colorScheme="blue" type="submit" isLoading={loading} width="100%">
-            Войти
-          </Button>
-        </VStack>
+        <div>
+          <label>Логин</label>
+          <input
+            type="text"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div>
+          <label>Пароль</label>
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+
+        <button type="submit">Войти</button>
       </form>
-    </Box>
+    </div>
   );
 };
 

@@ -10,7 +10,8 @@ import { useAuth } from "../providers/AuthProvider";
 import { useNavigate } from "react-router-dom";
 
 const StoragePage = () => {
-  const { accessToken } = useAuth();
+  const { accessToken, isInitialized } = useAuth();  // Получаем accessToken и флаг инициализации
+  // const { accessToken } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [files, setFiles] = useState([]);
@@ -21,20 +22,49 @@ const StoragePage = () => {
   const [editedName, setEditedName] = useState("");
   const [editedComment, setEditedComment] = useState("");
 
+  // useEffect(() => {
+  //   if (!accessToken) {
+  //     console.log('Такой-то вот токен', accessToken)
+  //     navigate("/login");
+  //     return;
+  //   }
+  //   fetchFiles();
+  // }, [accessToken, navigate]);
+
+  // const fetchFiles = async () => {
+  //   try {
+  //     const response = await api.get(`${import.meta.env.VITE_API_URL}/storage/files/`, {
+  //       headers: { Authorization: `Bearer ${accessToken}` },
+  //     });
+  //     setFiles(response.data);
+  //   } catch (error) {
+  //     toast({
+  //       title: "Ошибка",
+  //       description: "Не удалось загрузить файлы",
+  //       status: "error",
+  //       duration: 3000,
+  //       isClosable: true,
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   useEffect(() => {
+    if (!isInitialized) return;  // Ждем, пока данные пользователя будут инициализированы
     if (!accessToken) {
-      navigate("/login");
+      console.log('Нет токена');
+      navigate("/login");  // Если токен отсутствует, редиректим на страницу логина
       return;
     }
-    fetchFiles();
-  }, [accessToken, navigate]);
+    fetchFiles();  // Загружаем файлы, если токен доступен
+  }, [accessToken, isInitialized, navigate]);  // Следим за изменениями в токене и состоянии инициализации
 
   const fetchFiles = async () => {
     try {
       const response = await api.get(`${import.meta.env.VITE_API_URL}/storage/files/`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      setFiles(response.data);
+      setFiles(response.data);  // Загружаем файлы
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -44,7 +74,7 @@ const StoragePage = () => {
         isClosable: true,
       });
     } finally {
-      setLoading(false);
+      setLoading(false);  // Завершаем загрузку
     }
   };
 

@@ -79,15 +79,18 @@ class CurrentUserView(APIView):
 
     def get(self, request):
         # print("Authorization header:", request.META.get('HTTP_AUTHORIZATION'))
+
         print("Auth header:", request.META.get("HTTP_AUTHORIZATION"))
         print("User ID:", request.user.id)
         try:
             user = request.user
+            # serializer = UserSerializer(user)
             logger.info(f'User {user.username} is authenticated.')
             return Response({
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
+                'is_admin': user.is_admin,
             })
         except (InvalidToken, TokenError) as e:
             logger.error(f'Token error: {str(e)}')

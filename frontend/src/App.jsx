@@ -7,6 +7,7 @@ import StoragePage from "./pages/StoragePage";
 import ProfilePage from "./pages/ProfilePage";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
+import Admin from './pages/Admin';
 
 const App = () => {
   return (
@@ -20,6 +21,7 @@ const App = () => {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/storage" element={<StoragePage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
         </Router>
       </AuthProvider>

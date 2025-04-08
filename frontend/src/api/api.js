@@ -34,7 +34,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem('auth');
-        window.location.href = '/login';
+        // 🔥 УБРАЛ window.location.href = '/login' во избежание перезагрузки
         return Promise.reject(refreshError);
       }
     }
