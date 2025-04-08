@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.http import FileResponse
 from .models import File
 from .serializers import FileSerializer
+from django.utils import timezone
 
 
 class FileViewSet(viewsets.ModelViewSet):

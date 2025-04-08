@@ -1,55 +1,46 @@
-import { createContext, useState, useContext, useEffect } from 'react';
-import { login as apiLogin, getCurrentUser } from '../api/auth';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { getCurrentUser, logout as doLogout } from '../api/auth';
 
 const AuthContext = createContext();
 
-// Кастомный хук для использования контекста
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Инициализация при загрузке
   useEffect(() => {
-    try {
-      const userData = getCurrentUser();
-      if (userData) {
-        setUser(userData);
+    const initializeUser = async () => {
+      const authData = localStorage.getItem('auth');
+      if (!authData) {
+        setIsInitialized(true);
+        return;
       }
-    } catch (error) {
-      console.error('Ошибка загрузки данных пользователя', error);
-    } finally {
-      setIsInitialized(true);
-    }
-  }, []);
-
-  const login = async (credentials) => {
-    try {
-      const data = await apiLogin(credentials);  // Запрос на логин
-      setUser(data.user);  // Сохраняем данные пользователя
-      return data;
-    } catch (error) {
-      console.error("Login failed:", error);
-      throw error;  // Бросаем ошибку для обработки в компоненте
-    }
-  };
+  
+      try {
+        const userData = await getCurrentUser();
+        setUser(userData);
+      } catch (error) {
+        console.error('Ошибка инициализации пользователя:', error);
+        doLogout();
+        setUser(null);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+  
+    initializeUser();
+  }, []); // Только при монтировании
+  
 
   const logout = () => {
-    localStorage.removeItem('auth');  // Удаляем токены из localStorage
-    setUser(null);  // Сбрасываем состояние пользователя
+    doLogout();
+    setUser(null);
   };
 
-  // Если данные еще не загружены, показываем индикатор загрузки
-  if (!isInitialized) {
-    return <div>Загрузка...</div>;
-  }
-
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, isInitialized, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
+
+export const useAuth = () => useContext(AuthContext);
