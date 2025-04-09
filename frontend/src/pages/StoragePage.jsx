@@ -66,6 +66,9 @@ const StoragePage = () => {
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
+    formData.append('name', file.name);  // Передаем имя файла
+    formData.append('comment', 'Some comment');  // Дополнительные поля
+
 
     try {
       const response = await api.post("/storage/files/", formData);
