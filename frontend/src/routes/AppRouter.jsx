@@ -29,7 +29,6 @@ const AppRouter = () => (
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/storage" element={<PrivateRoute><StoragePage /></PrivateRoute>} />
-      <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
       <Route path="/" element={<Navigate to="/storage" />} />
       <Route path="*" element={<NotFoundPage />} />
