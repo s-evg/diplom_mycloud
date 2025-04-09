@@ -1,58 +1,49 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import api from "../api/api";
+import { createContext, useContext, useState, useEffect } from "react";
+import { getCurrentUser } from "../api/auth";
 
-// Создаем контекст для аутентификации
 const AuthContext = createContext();
 
-// Хук для получения доступа к состоянию аутентификации в других компонентах
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
-
 export const AuthProvider = ({ children }) => {
-  // Инициализируем состояния
-  const [accessToken, setAccessToken] = useState(localStorage.getItem("auth"));
-  const [user, setUser] = useState(null);  // Состояние для хранения данных пользователя
-  const [isInitialized, setIsInitialized] = useState(false);  // Состояние для отслеживания инициализации
+  const [user, setUser] = useState(null);
+  const [accessToken, setAccessToken] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Проверяем токен и пытаемся получить данные пользователя
   useEffect(() => {
-    if (accessToken) {
-      api
-        .get("/auth/user", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-        .then((response) => {
-          setUser(response.data);  // Если токен валидный, устанавливаем данные пользователя
-        })
+    const storedAuth = sessionStorage.getItem("auth");
+    if (storedAuth) {
+      const { access, refresh } = JSON.parse(storedAuth);
+      setAccessToken(access);
+      getCurrentUser()
+        .then(setUser)
         .catch(() => {
-          setUser(null);  // Если ошибка, сбрасываем данные пользователя
+          setUser(null);
+          sessionStorage.removeItem("auth");
         })
-        .finally(() => {
-          setIsInitialized(true);  // Завершаем процесс инициализации, даже если произошла ошибка
-        });
+        .finally(() => setIsInitialized(true));
     } else {
-      setIsInitialized(true);  // Если токена нет, сразу завершаем инициализацию
+      setIsInitialized(true);
     }
-  }, [accessToken]);  // Эффект будет срабатывать при изменении токена
+  }, []);
 
-  // Функция для обновления токена
-  const updateToken = (newToken) => {
-    localStorage.setItem("auth", newToken);  // Сохраняем новый токен в localStorage
-    setAccessToken(newToken);  // Обновляем состояние токена
+  const login = ({ access, refresh }, userData) => {
+    sessionStorage.setItem("auth", JSON.stringify({ access, refresh }));
+    setAccessToken(access);
+    setUser(userData);
   };
 
-  // Функция для выхода пользователя
   const logout = () => {
-    localStorage.removeItem("auth");  // Удаляем токен из localStorage
-    setAccessToken(null);  // Обновляем состояние токена
-    setUser(null);  // Обновляем состояние пользователя
+    sessionStorage.removeItem("auth");
+    setAccessToken(null);
+    setUser(null);
   };
 
-  // Возвращаем контекст с состоянием и функциями
   return (
-    <AuthContext.Provider value={{ accessToken, user, isInitialized, setUser, updateToken, logout }}>
+    <AuthContext.Provider
+      value={{ user, accessToken, isInitialized, login, logout, setUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);

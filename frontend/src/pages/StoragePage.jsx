@@ -13,7 +13,9 @@ const StoragePage = () => {
   const { accessToken, isInitialized } = useAuth();  // Получаем accessToken и флаг инициализации
   // const { accessToken } = useAuth();
   const navigate = useNavigate();
+  
   const toast = useToast();
+  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [file, setFile] = useState(null);
@@ -159,6 +161,7 @@ const StoragePage = () => {
 
   return (
     <VStack spacing={6} mt={10} align="center">
+      <Text fontSize="lg"><strong>Имя пользователя:</strong> {user?.username}</Text>
       <Heading size="xl">Мои файлы</Heading>
 
       {/* Отображение общего объема */}
