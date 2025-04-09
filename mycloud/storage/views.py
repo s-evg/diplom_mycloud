@@ -7,11 +7,13 @@ from django.http import FileResponse
 from .models import File
 from .serializers import FileSerializer
 from django.utils import timezone
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class FileViewSet(viewsets.ModelViewSet):
     serializer_class = FileSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
         user = self.request.user
