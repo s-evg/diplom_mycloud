@@ -21,7 +21,7 @@ const Admin = () => {
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const toast = useToast();
-  const { accessToken } = useAuth();
+  const { accessToken, user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchUsers();
@@ -74,11 +74,9 @@ const Admin = () => {
   const handleToggleAdmin = async (user) => {
     try {
       const updatedUser = { ...user, is_admin: !user.is_admin };
-      // Отправляем запрос на обновление прав пользователя
       await api.put(`/auth/admin/users/${user.id}/`, updatedUser, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      // Обновляем локальное состояние для изменения прав без перезагрузки страницы
       setUsers((prevUsers) =>
         prevUsers.map((u) =>
           u.id === user.id ? { ...u, is_admin: updatedUser.is_admin } : u
@@ -97,68 +95,86 @@ const Admin = () => {
         <Spinner />
       ) : (
         <VStack spacing={6} align="stretch">
-          {users.map((user) => (
-            <Box key={user.id} p={4} borderWidth="1px" borderRadius="lg">
-              <HStack justifyContent="space-between">
-                <Box>
-                  <Text><strong>Имя:</strong> {user.username}</Text>
-                  <Text><strong>Email:</strong> {user.email}</Text>
-                  <Text><strong>Файлов:</strong> {user.storage_stats?.file_count || 0}</Text>
-                  <Text><strong>Общий размер:</strong> {user.storage_stats?.total_size_mb.toFixed(2)} МБ</Text>
-                </Box>
-                <VStack>
-                  <HStack>
-                    <Button
-                      leftIcon={expandedUserId === user.id ? <ViewOffIcon /> : <ViewIcon />}
-                      onClick={() => toggleFiles(user.id)}
-                    >
-                      {expandedUserId === user.id ? 'Скрыть' : 'Файлы'}
-                    </Button>
-                    <IconButton
-                      icon={<DeleteIcon />} colorScheme="red"
-                      onClick={() => handleDeleteUser(user.id)}
-                    />
-                  </HStack>
-                  <HStack>
-                    <Text>Админ</Text>
-                    <Switch
-                      isChecked={user.is_admin}
-                      onChange={() => handleToggleAdmin(user)}
-                    />
-                  </HStack>
-                </VStack>
-              </HStack>
-              {expandedUserId === user.id && (
-                <Box mt={4} pl={4}>
-                  <Divider mb={2} />
-                  <VStack align="start" spacing={3}>
-                    {user.files && user.files.length > 0 ? (
-                      user.files.map((file) => (
-                        <HStack key={file.id} justifyContent="space-between" w="100%">
-                          <Box>
-                            <Text><strong>Имя:</strong> {file.name}</Text>
-                            <Text><strong>Размер:</strong> {(file.size / 1024 / 1024).toFixed(2)} МБ</Text>
-                            <Text><strong>Загружен:</strong> {new Date(file.published).toLocaleString()}</Text>
-                          </Box>
-                          <HStack>
-                            <a href={file.file} target="_blank" rel="noopener noreferrer">
-                              <IconButton icon={<DownloadIcon />} />
-                            </a>
-                            <IconButton
-                              icon={<DeleteIcon />} colorScheme="red"
-                              onClick={() => handleDeleteFile(file.id)}
-                            />
-                          </HStack>
-                        </HStack>
-                      ))
-                    ) : (
-                      <Text>Файлы отсутствуют.</Text>
-                    )}
+          {users
+            .filter((user) => user.id !== currentUser?.id)
+            .map((user) => (
+              <Box key={user.id} p={4} borderWidth="1px" borderRadius="lg">
+                <HStack justifyContent="space-between">
+                  <Box>
+                    <Text><strong>Имя:</strong> {user.username}</Text>
+                    <Text><strong>Email:</strong> {user.email}</Text>
+                    <Text><strong>Файлов:</strong> {user.storage_stats?.file_count || 0}</Text>
+                    <Text><strong>Общий размер:</strong> {user.storage_stats?.total_size_mb.toFixed(2)} МБ</Text>
+                  </Box>
+                  <VStack>
+                    <HStack>
+                      <Button
+                        size="sm"
+                        colorScheme="blue"
+                        onClick={() => window.location.href = `/storage/${user.id}`}
+                      >
+                        Хранилище
+                      </Button>
+                      <Button
+                        size="sm"
+                        colorScheme="red"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        Удалить
+                      </Button>
+                    </HStack>
+                    {/* <HStack>
+                      <Button
+                        leftIcon={expandedUserId === user.id ? <ViewOffIcon /> : <ViewIcon />}
+                        onClick={() => toggleFiles(user.id)}
+                      >
+                        {expandedUserId === user.id ? 'Скрыть' : 'Файлы'}
+                      </Button>
+                      <IconButton
+                        icon={<DeleteIcon />} colorScheme="red"
+                        onClick={() => handleDeleteUser(user.id)}
+                      />
+                    </HStack> */}
+                    <HStack>
+                      <Text>Админ</Text>
+                      <Switch
+                        isChecked={user.is_admin}
+                        onChange={() => handleToggleAdmin(user)}
+                      />
+                    </HStack>
                   </VStack>
-                </Box>
-              )}
-            </Box>
-          ))}
+                </HStack>
+                {expandedUserId === user.id && (
+                  <Box mt={4} pl={4}>
+                    <Divider mb={2} />
+                    <VStack align="start" spacing={3}>
+                      {user.files && user.files.length > 0 ? (
+                        user.files.map((file) => (
+                          <HStack key={file.id} justifyContent="space-between" w="100%">
+                            <Box>
+                              <Text><strong>Имя:</strong> {file.name}</Text>
+                              <Text><strong>Размер:</strong> {(file.size / 1024 / 1024).toFixed(2)} МБ</Text>
+                              <Text><strong>Загружен:</strong> {new Date(file.published).toLocaleString()}</Text>
+                            </Box>
+                            <HStack>
+                              <a href={file.file} target="_blank" rel="noopener noreferrer">
+                                <IconButton icon={<DownloadIcon />} />
+                              </a>
+                              <IconButton
+                                icon={<DeleteIcon />} colorScheme="red"
+                                onClick={() => handleDeleteFile(file.id)}
+                              />
+                            </HStack>
+                          </HStack>
+                        ))
+                      ) : (
+                        <Text>Файлы отсутствуют.</Text>
+                      )}
+                    </VStack>
+                  </Box>
+                )}
+              </Box>
+            ))}
         </VStack>
       )}
     </Box>
@@ -166,4 +182,3 @@ const Admin = () => {
 };
 
 export default Admin;
-
