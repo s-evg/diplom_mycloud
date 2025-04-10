@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../providers/AuthProvider";
+import HomePage from '../pages/HomePage';
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import StoragePage from "../pages/StoragePage";
@@ -26,11 +27,12 @@ const AppRouter = () => (
   <Router>
     <Navbar />
     <Routes>
+      <Route path="/" element={<PublicRoute><HomePage /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/storage" element={<PrivateRoute><StoragePage /></PrivateRoute>} />
       <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
-      <Route path="/" element={<Navigate to="/storage" />} />
+      {/* <Route path="/" element={<Navigate to="/storage" />} /> */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   </Router>

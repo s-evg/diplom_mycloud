@@ -11,10 +11,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'is_admin', 'storage_stats']
-        read_only_fields = ['is_admin']
+        # read_only_fields = ['is_admin']
 
     def get_storage_stats(self, obj):
-        return obj.storage_stats
+        # return obj.storage_stats
+        return getattr(obj, "storage_stats", None)
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):

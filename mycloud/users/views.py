@@ -4,22 +4,42 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from rest_framework.views import APIView
-from .models import User
-from .serializers import UserSerializer, UserRegisterSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import BasePermission
 import logging
+from django.shortcuts import get_object_or_404
+from django.db.models import Count, Sum
 
+
+from .models import User
+from storage.models import File
+from .serializers import UserSerializer, UserRegisterSerializer
 logger = logging.getLogger(__name__)
 
 
+class IsAdminCustom(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_admin)
+
+
 class AdminUserListView(generics.ListCreateAPIView):
-    """
-    API endpoint для просмотра и создания пользователей (только для администраторов)
-    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    # permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminCustom]
+
+    def get_queryset(self):
+        users = super().get_queryset()
+        # Добавим каждому пользователю stats вручную
+        for user in users:
+            files = File.objects.filter(user=user)
+            total_size = sum(f.file.size for f in files)
+            user.storage_stats = {
+                "file_count": files.count(),
+                "total_size_mb": total_size / (1024 * 1024),
+            }
+        return users
 
 
 class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -28,7 +48,8 @@ class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    # permission_classes = [IsAdminUser, IsAdminCustom]
+    permission_classes = [IsAuthenticated, IsAdminCustom]
 
 
 class RegisterView(generics.CreateAPIView):
@@ -128,3 +149,21 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         print(f"Response status code: {response.status_code}")
         return response
+
+
+class AdminDeleteUserView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminCustom]
+
+    def delete(self, request, user_id):
+        user = get_object_or_404(User, id=user_id)
+
+        # Удаляем файлы физически
+        user_files = File.objects.filter(user=user)
+        for file in user_files:
+            if file.file:
+                file.file.delete(save=False)
+        user_files.delete()
+
+        user.delete()
+
+        return Response({"message": "Пользователь и его файлы удалены."}, status=status.HTTP_200_OK)

@@ -67,7 +67,7 @@ const StoragePage = () => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append('name', file.name);  // Передаем имя файла
-    formData.append('comment', 'Some comment');  // Дополнительные поля
+    formData.append('comment', '');  // Дополнительные поля
 
 
     try {

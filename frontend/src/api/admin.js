@@ -4,6 +4,13 @@ import { authHeader } from './auth';
 
 const API_URL = 'http://localhost:8000/api/admin';
 
+
+export const getUserFiles = (userId) =>
+  api.get(`/storage/files/?user=${userId}`).then(res => res.data);
+
+export const deleteUserFile = (fileId) =>
+  api.delete(`/storage/files/${fileId}/`);
+
 // Функция для получения списка всех пользователей
 export const getUsers = async () => {
   try {

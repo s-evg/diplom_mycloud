@@ -7,7 +7,7 @@ export const register = async (userData) => {
     const response = await api.post(`${API_URL}/register/`, userData);
     return response.data;
   } catch (error) {
-    console.error('Registration error:', error.response?.data);
+    console.error('Ошибка регистрации:', error.response?.data);
     throw error;
   }
 };
@@ -24,7 +24,7 @@ export const login = async (credentials) => {
     localStorage.setItem('auth', JSON.stringify({ access, refresh }));
     return { access, refresh };
   } catch (err) {
-    console.error('Login error:', err);
+    console.error('Ошибка входа:', err);
     throw new Error(err.response?.data?.detail || 'Ошибка авторизации');
   }
 };
