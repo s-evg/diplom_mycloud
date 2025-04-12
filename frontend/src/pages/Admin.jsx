@@ -73,13 +73,13 @@ const Admin = () => {
 
   const handleToggleAdmin = async (user) => {
     try {
-      const updatedUser = { ...user, is_admin: !user.is_admin };
+      const updatedUser = { ...user, is_staff: !user.is_staff };
       await api.put(`/auth/admin/users/${user.id}/`, updatedUser, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setUsers((prevUsers) =>
         prevUsers.map((u) =>
-          u.id === user.id ? { ...u, is_admin: updatedUser.is_admin } : u
+          u.id === user.id ? { ...u, is_staff: updatedUser.is_staff } : u
         )
       );
       toast({ title: 'Права обновлены', status: 'success' });
@@ -123,6 +123,7 @@ const Admin = () => {
                         Удалить
                       </Button>
                     </HStack>
+                    {/* Логика отображения файлов каждого пользователя */}
                     {/* <HStack>
                       <Button
                         leftIcon={expandedUserId === user.id ? <ViewOffIcon /> : <ViewIcon />}
@@ -138,7 +139,7 @@ const Admin = () => {
                     <HStack>
                       <Text>Админ</Text>
                       <Switch
-                        isChecked={user.is_admin}
+                        isChecked={user.is_staff}
                         onChange={() => handleToggleAdmin(user)}
                       />
                     </HStack>

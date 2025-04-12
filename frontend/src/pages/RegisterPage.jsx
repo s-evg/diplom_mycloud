@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-// import api from '../api/api';
 import {
   Box,
   Button,
@@ -17,6 +16,7 @@ const RegisterPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
+    full_name: "",
     email: "",
     password: "",
     password2: "",
@@ -36,7 +36,6 @@ const RegisterPage = () => {
 
     try {
       await axios.post("http://localhost:8000/api/auth/register/", formData);
-      // await axios.post("/api/auth/register/", formData);
       navigate("/login");
     } catch (err) {
       setError("Ошибка регистрации. Возможно, такой пользователь уже существует.");
@@ -54,6 +53,16 @@ const RegisterPage = () => {
               type="text"
               name="username"
               value={formData.username}
+              onChange={handleChange}
+              required
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel>Имя (ФИО)</FormLabel>
+            <Input
+              type="text"
+              name="full_name"
+              value={formData.full_name}
               onChange={handleChange}
               required
             />

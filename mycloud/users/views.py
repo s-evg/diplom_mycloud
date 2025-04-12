@@ -18,16 +18,24 @@ from .serializers import UserSerializer, UserRegisterSerializer
 logger = logging.getLogger(__name__)
 
 
-class IsAdminCustom(BasePermission):
+class IsStaffUser(BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.is_admin)
+        # Логируем попытку доступа
+        if request.user.is_authenticated:
+            logger.info(
+                f"User {request.user.username} is_staff: {request.user.is_staff}")
+        return request.user.is_authenticated and request.user.is_staff
+
+# class IsAdminCustom(BasePermission):
+#     def has_permission(self, request, view):
+#         return bool(request.user and request.user.is_authenticated and request.user.is_staff)
 
 
 class AdminUserListView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    # permission_classes = [IsAdminUser]
-    permission_classes = [IsAdminCustom]
+    permission_classes = [IsStaffUser]
+    # permission_classes = [IsAdminCustom]
 
     def get_queryset(self):
         users = super().get_queryset()
@@ -49,7 +57,8 @@ class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     # permission_classes = [IsAdminUser, IsAdminCustom]
-    permission_classes = [IsAuthenticated, IsAdminCustom]
+    # permission_classes = [IsAuthenticated, IsAdminCustom]
+    permission_classes = [IsAuthenticated, IsStaffUser]
 
 
 class RegisterView(generics.CreateAPIView):
@@ -110,8 +119,9 @@ class CurrentUserView(APIView):
             return Response({
                 'id': user.id,
                 'username': user.username,
+                'fullname': user.first_name,
                 'email': user.email,
-                'is_admin': user.is_admin,
+                'is_staff': user.is_staff,
             })
         except (InvalidToken, TokenError) as e:
             logger.error(f'Token error: {str(e)}')
@@ -143,7 +153,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 'user': {
                     'id': user.id,
                     'username': user.username,
-                    'is_admin': user.is_admin
+                    'is_staff': user.is_staff
                 }
             }, status=status.HTTP_200_OK)
 
@@ -152,7 +162,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class AdminDeleteUserView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminCustom]
+    # permission_classes = [IsAuthenticated, IsAdminCustom]
+    permission_classes = [IsAuthenticated, IsStaffUser]
 
     def delete(self, request, user_id):
         user = get_object_or_404(User, id=user_id)

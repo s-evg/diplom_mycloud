@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name='Email')
-    is_admin = models.BooleanField(default=False)
+    # is_admin = models.BooleanField(default=False)
 
     def __str__(self):
         # return self.username

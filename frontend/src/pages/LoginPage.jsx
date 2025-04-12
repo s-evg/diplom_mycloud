@@ -22,7 +22,7 @@ const LoginPage = () => {
       const tokenData = await loginUser(form);
       const userData = await getCurrentUser();
       login(tokenData, userData);           // Сохраняем токены и юзера
-      navigate("/storage");                 // ✅ редирект после логина
+      navigate("/storage");                 // редирект после логина
     } catch (err) {
       setError("Неверные данные для входа");
     }

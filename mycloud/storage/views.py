@@ -17,7 +17,7 @@ class FileViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_admin and 'user_id' in self.request.query_params:
+        if user.is_staff and 'user_id' in self.request.query_params:
             return File.objects.filter(user_id=self.request.query_params['user_id'])
         return File.objects.filter(user=user)
 
