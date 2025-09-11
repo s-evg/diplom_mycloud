@@ -1,180 +1,110 @@
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework import status
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import BasePermission
-import logging
-from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum
-
-
-from .models import User
 from storage.models import File
+
 from .serializers import UserSerializer, UserRegisterSerializer
-logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
-class IsStaffUser(BasePermission):
+class IsAdminUser(BasePermission):
+    """Кастомная проверка на is_admin из модели User согласно заданию"""
+
     def has_permission(self, request, view):
-        # Логируем попытку доступа
-        if request.user.is_authenticated:
-            logger.info(
-                f"User {request.user.username} is_staff: {request.user.is_staff}")
-        return request.user.is_authenticated and request.user.is_staff
-
-# class IsAdminCustom(BasePermission):
-#     def has_permission(self, request, view):
-#         return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+        return (request.user.is_authenticated and
+                getattr(request.user, 'is_admin', False))
 
 
 class AdminUserListView(generics.ListCreateAPIView):
+    """
+    Список пользователей + создание (только для админов)
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsStaffUser]
-    # permission_classes = [IsAdminCustom]
+    # Используем кастомный класс
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get_queryset(self):
         users = super().get_queryset()
-        # Добавим каждому пользователю stats вручную
+        # Добавляем статистику по файлам для каждого пользователя
         for user in users:
             files = File.objects.filter(user=user)
-            total_size = sum(f.file.size for f in files)
+            total_size = sum(f.file.size for f in files if f.file)
             user.storage_stats = {
                 "file_count": files.count(),
-                "total_size_mb": total_size / (1024 * 1024),
+                "total_size_mb": round(total_size / (1024 * 1024), 2),
             }
         return users
 
 
 class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    API endpoint для детального просмотра, обновления и удаления пользователей (только для администраторов)
+    Детали / обновление / удаление пользователя (только для админов)
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    # permission_classes = [IsAdminUser, IsAdminCustom]
-    # permission_classes = [IsAuthenticated, IsAdminCustom]
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    # Используем кастомный класс
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def update(self, request, *args, **kwargs):
+        # Только админы могут менять is_admin
+        if 'is_admin' in request.data and not request.user.is_admin:
+            return Response(
+                {"detail": "Только администраторы могут изменять права доступа."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
 
 
 class RegisterView(generics.CreateAPIView):
     """
-    API endpoint для регистрации новых пользователей
+    Регистрация новых пользователей + сразу возвращаем JWT токены
     """
     serializer_class = UserRegisterSerializer
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            errors = serializer.errors
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()  # Возвращает объект User
 
-            # Определяем точную причину ошибки
-            if 'username' in errors and errors['username'][0].code == 'unique':
-                return Response(
-                    {"error": "Данное имя пользователя уже занято"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            elif 'email' in errors and errors['email'][0].code == 'unique':
-                return Response(
-                    {"error": "Данный email уже используется"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        # Генерация токенов после регистрации
+        refresh = RefreshToken.for_user(user)
 
-            # Для остальных ошибок валидации
-            error_messages = []
-            for field, error_list in errors.items():
-                error_messages.extend([str(error) for error in error_list])
-
-            return Response(
-                {"error": " | ".join(error_messages)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        self.perform_create(serializer)
-
-        return Response(
-            {"success": "Регистрация прошла успешно!"},
-            status=status.HTTP_201_CREATED
-        )
+        return Response({
+            "user": UserSerializer(user).data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
 
 
 class CurrentUserView(APIView):
-    authentication_classes = [JWTAuthentication]
+    """
+    Получение данных текущего пользователя (требует авторизации)
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # print("Authorization header:", request.META.get('HTTP_AUTHORIZATION'))
-
-        print("Auth header:", request.META.get("HTTP_AUTHORIZATION"))
-        print("User ID:", request.user.id)
-        try:
-            user = request.user
-            # serializer = UserSerializer(user)
-            logger.info(f'User {user.username} is authenticated.')
-            return Response({
-                'id': user.id,
-                'username': user.username,
-                'fullname': user.first_name,
-                'email': user.email,
-                'is_staff': user.is_staff,
-            })
-        except (InvalidToken, TokenError) as e:
-            logger.error(f'Token error: {str(e)}')
-            return Response({'error': 'Invalid token or expired'}, status=401)
+        user = request.user
+        return Response(UserSerializer(user).data)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        print("Token generation started")  # Печатаем начало процесса
+    """
+    Кастомный эндпоинт для логина: возвращает токены + данные пользователя
+    """
 
+    def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
 
-        # Печатаем, что приходит в response
-        # print(f"Response after token generation: {response.data}")
-
         if response.status_code == 200:
-            # Получаем пользователя через сериализатор
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            user = serializer.user
+            user = User.objects.get(username=request.data["username"])
+            response.data["user"] = UserSerializer(user).data
 
-            # Печатаем токены в консоль
-            print(f"Access Token: {response.data['access']}")
-            print(f"Refresh Token: {response.data['refresh']}")
-
-            return Response({
-                'access': response.data['access'],
-                'refresh': response.data['refresh'],
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'is_staff': user.is_staff
-                }
-            }, status=status.HTTP_200_OK)
-
-        print(f"Response status code: {response.status_code}")
         return response
-
-
-class AdminDeleteUserView(APIView):
-    # permission_classes = [IsAuthenticated, IsAdminCustom]
-    permission_classes = [IsAuthenticated, IsStaffUser]
-
-    def delete(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
-
-        # Удаляем файлы физически
-        user_files = File.objects.filter(user=user)
-        for file in user_files:
-            if file.file:
-                file.file.delete(save=False)
-        user_files.delete()
-
-        user.delete()
-
-        return Response({"message": "Пользователь и его файлы удалены."}, status=status.HTTP_200_OK)

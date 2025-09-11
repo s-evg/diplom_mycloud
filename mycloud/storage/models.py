@@ -1,74 +1,79 @@
 # from django.db import models
+# from django.core.exceptions import ValidationError
 # from users.models import User
-# import secrets
 # import os
+# import secrets
 
 
-# def user_file_path(instance, filename):
-#     # Имя пользователя + уникальный суффикс
-#     username = instance.user.username
-#     base, ext = os.path.splitext(filename)
-#     unique_name = secrets.token_urlsafe(8)
-#     return f"user_{username}/{unique_name}_{base}{ext}"
+# def user_directory_path(instance, filename):
+#     # Файл сохраняется как user_<username>/<original_filename>
+#     return f"user_{instance.user.username}/{filename}"
 
 
 # class File(models.Model):
 #     user = models.ForeignKey(
-#         User, on_delete=models.CASCADE, related_name='files')
-#     # file = models.FileField(upload_to='user_files/%Y/%m/%d/')
-#     file = models.FileField(upload_to=user_file_path)
+#         User, on_delete=models.CASCADE, related_name='files'
+#     )
+#     file = models.FileField(upload_to=user_directory_path)
 #     name = models.CharField(max_length=255)
 #     comment = models.TextField(blank=True)
 #     size = models.BigIntegerField()
 #     file_type = models.CharField(max_length=50)
 #     published = models.DateTimeField(auto_now_add=True)
 #     last_download = models.DateTimeField(null=True, blank=True)
-#     is_public = models.BooleanField(default=False)
+#     is_public = models.BooleanField(default=True)
 #     link_download = models.CharField(max_length=50, unique=True, blank=True)
 
-#     def save(self, *args, **kwargs):
-#         # Проверка на дублирование имени файла у этого пользователя
-#         if File.objects.filter(user=self.user, name=self.name).exclude(pk=self.pk).exists():
-#             raise ValueError("Файл с таким именем уже существует.")
+#     class Meta:
+#         # Уникальное имя файла для каждого пользователя
+#         unique_together = ['user', 'name']
 
+#     def clean(self):
+#         # Проверка уникальности имени файла у одного пользователя
+#         existing = File.objects.filter(user=self.user, name=self.name)
+#         if self.pk:
+#             existing = existing.exclude(pk=self.pk)  # <- исключаем сам файл
+#         if existing.exists():
+#             raise ValidationError("Файл с таким именем уже существует.")
+
+#     def save(self, *args, **kwargs):
 #         if not self.link_download:
 #             self.link_download = secrets.token_urlsafe(24)
 
+#         # Устанавливаем имя файла, если не задано
 #         if not self.name and self.file:
 #             self.name = os.path.basename(self.file.name)
 
+#         self.full_clean()  # вызывает clean() и проверку ошибок
+
 #         super().save(*args, **kwargs)
 
-#     # def save(self, *args, **kwargs):
-#     #     if not self.link_download:
-#     #         self.link_download = secrets.token_urlsafe(24)
-#     #     if not self.name and self.file:
-#     #         self.name = os.path.basename(self.file.name)
-
-#     #     # Формирование пути с учетом имени пользователя
-#     #     if not self.file.name:
-#     #         self.file.name = f"{self.user.username}/{secrets.token_urlsafe(12)}_{os.path.basename(self.file.name)}"
-
-#     #     super().save(*args, **kwargs)
+#     # def get_absolute_url(self):
+#     #     return f"/api/storage/files/{self.pk}/download/"
 
 #     def get_absolute_url(self):
-#         return f"/api/storage/files/{self.pk}/download/"
+#         return f"/api/storage/files/{self.link_download}/download/"
+
+#     def delete(self, *args, **kwargs):
+#         if self.file and os.path.isfile(self.file.path):
+#             os.remove(self.file.path)
+#         super().delete(*args, **kwargs)
 
 #     def __str__(self):
 #         return f"{self.name} ({self.user.username})"
 
-
+# Claude
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 from users.models import User
-import secrets
 import os
+import secrets
 
 
 def user_directory_path(instance, filename):
-    # Создаём путь вида: user_<username>/<уникальное_имя_файла>
-    unique_name = secrets.token_urlsafe(8)
-    base_name = os.path.basename(filename)
-    return f'user_{instance.user.username}/{unique_name}_{base_name}'
+    # Файл сохраняется как user_<username>/<original_filename>
+    return f"user_{instance.user.username}/{filename}"
 
 
 class File(models.Model):
@@ -76,38 +81,63 @@ class File(models.Model):
         User, on_delete=models.CASCADE, related_name='files'
     )
     file = models.FileField(upload_to=user_directory_path)
-    name = models.CharField(max_length=255, unique=True)
-    comment = models.TextField(blank=True)
-    size = models.BigIntegerField()
-    file_type = models.CharField(max_length=50)
-    published = models.DateTimeField(auto_now_add=True)
-    last_download = models.DateTimeField(null=True, blank=True)
-    is_public = models.BooleanField(default=False)
-    link_download = models.CharField(max_length=50, unique=True, blank=True)
+    name = models.CharField(max_length=255, verbose_name='Имя файла')
+    comment = models.TextField(blank=True, verbose_name='Комментарий')
+    size = models.BigIntegerField(verbose_name='Размер в байтах')
+    file_type = models.CharField(max_length=50, verbose_name='Тип файла')
+    published = models.DateTimeField(
+        default=timezone.now,  # ИСПРАВЛЕНО: вместо auto_now_add=True
+        verbose_name='Дата загрузки'
+    )
+    last_download = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата последнего скачивания'
+    )
+    is_public = models.BooleanField(
+        default=True,
+        verbose_name='Публичный доступ'
+    )
+    link_download = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        verbose_name='Специальная ссылка'
+    )
 
-    # Уникальность для пары (user, name)
     class Meta:
+        # Уникальное имя файла для каждого пользователя
         unique_together = ['user', 'name']
+        verbose_name = 'Файл'
+        verbose_name_plural = 'Файлы'
+        ordering = ['-published']  # Новые файлы первыми
+
+    def clean(self):
+        # Проверка уникальности имени файла у одного пользователя
+        existing = File.objects.filter(user=self.user, name=self.name)
+        if self.pk:
+            existing = existing.exclude(pk=self.pk)  # <- исключаем сам файл
+        if existing.exists():
+            raise ValidationError("Файл с таким именем уже существует.")
 
     def save(self, *args, **kwargs):
         if not self.link_download:
             self.link_download = secrets.token_urlsafe(24)
 
+        # Устанавливаем имя файла, если не задано
         if not self.name and self.file:
             self.name = os.path.basename(self.file.name)
 
-        # Уникальность имени файла уже гарантируется через поле name
-        self.name = f"{self.user.username}_{secrets.token_urlsafe(8)}_{self.name}"
+        self.full_clean()  # вызывает clean() и проверку ошибок
+
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return f"/api/storage/files/{self.pk}/download/"
+        return f"/api/storage/files/{self.link_download}/download/"
 
     def delete(self, *args, **kwargs):
-        # Удаляем файл с диска, если он существует
-        if self.file:
-            if os.path.isfile(self.file.path):
-                os.remove(self.file.path)
+        if self.file and os.path.isfile(self.file.path):
+            os.remove(self.file.path)
         super().delete(*args, **kwargs)
 
     def __str__(self):

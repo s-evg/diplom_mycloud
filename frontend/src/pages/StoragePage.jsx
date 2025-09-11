@@ -26,7 +26,6 @@ const StoragePage = () => {
   const [editingFile, setEditingFile] = useState(null);
   const [editedName, setEditedName] = useState("");
   const [editedComment, setEditedComment] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -48,6 +47,9 @@ const StoragePage = () => {
     }
   };
 
+  
+  const fileInputRef = React.useRef();
+
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
@@ -63,15 +65,27 @@ const StoragePage = () => {
       return;
     }
 
+    // Проверка на дубликат по имени файла
+    const duplicate = files.find((f) => f.name === file.name);
+    if (duplicate) {
+      toast({
+        title: "Файл уже существует",
+        description: `Файл с именем "${file.name}" уже загружен`,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-    formData.append('name', file.name);  // Передаем имя файла
-    formData.append('comment', '');  // Дополнительные поля
-
+    formData.append("name", file.name);
+    formData.append("comment", "");
 
     try {
-      const response = await api.post("/storage/files/", formData);
+      await api.post("/storage/files/", formData);
       toast({
         title: "Файл загружен",
         status: "success",
@@ -80,6 +94,10 @@ const StoragePage = () => {
       });
       fetchFiles();
       setFile(null);
+      // Очистка input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } catch (error) {
       toast({
         title: "Ошибка загрузки",
@@ -117,7 +135,6 @@ const StoragePage = () => {
     setEditingFile(file);
     setEditedName(file.name);
     setEditedComment(file.comment || "");
-    setIsModalOpen(true);  // Открытие модального окна
   };
 
   const cancelEditing = () => {
@@ -127,36 +144,86 @@ const StoragePage = () => {
   };
 
   const saveChanges = async () => {
-  try {
-    // Создаём объект FormData, если редактируем файл
-    const formData = new FormData();
-    formData.append('name', editedName);  // Используем editedName, а не editingFile.name
-    formData.append('comment', editedComment);  // Также редактируем комментарий
-  
-    // Отправляем PATCH-запрос с правильным заголовком
-    await api.patch(
-      `storage/files/${editingFile.id}/`,
-      formData, // Отправляем данные как FormData
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          // Не указываем Content-Type для FormData
-        },
+    try {
+      const formData = new FormData();
+      // formData.append("name", editedName);
+      // Отделяем расширение от оригинального имени
+      const originalExt = editingFile.name.split(".").pop(); // jpg
+      let finalName = editedName;
+
+      // Если новое имя не содержит точку (расширения), добавляем его
+      if (!editedName.includes(".")) {
+        finalName = `${editedName}.${originalExt}`;
       }
-    );
+
+      formData.append("name", finalName);
+      formData.append("comment", editedComment);
+
+      await api.patch(`/storage/files/${editingFile.id}/`, formData, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      fetchFiles();
+      setEditingFile(null);
+      setEditedName("");
+      setEditedComment("");
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить изменения",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const copyLink = async (fileId) => {
+    const url = `http://localhost:8000/api/storage/files/${fileId}/download/`; // Указываем правильный адрес бэкенда
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Ссылка скопирована",
+        description: "Ссылка на файл скопирована в буфер обмена",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (err) {
+      toast({
+        title: "Ошибка копирования",
+        description: "Не удалось скопировать ссылку",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
+    }
+  };
   
-    // Обновляем список файлов
-    fetchFiles();
-    // После успешного обновления сбрасываем редактируемые данные
-    setEditingFile(null);
-    setEditedName("");
-    setEditedComment("");
-  } catch (error) {
-    console.error("Ошибка при сохранении изменений:", error);
-    alert('Не удалось сохранить изменения!');
-  }
-};
   
+  // const copyLink = async (fileId) => {
+  //   const url = `${window.location.origin}/storage/download/${fileId}/`;
+  //   try {
+  //     await navigator.clipboard.writeText(url);
+  //     toast({
+  //       title: "Ссылка скопирована",
+  //       description: "Ссылка на файл скопирована в буфер обмена",
+  //       status: "success",
+  //       duration: 2000,
+  //       isClosable: true,
+  //     });
+  //   } catch (err) {
+  //     toast({
+  //       title: "Ошибка копирования",
+  //       description: "Не удалось скопировать ссылку",
+  //       status: "error",
+  //       duration: 2000,
+  //       isClosable: true,
+  //     });
+  //   }
+  // };
 
   const formatSize = (size) => {
     if (size < 1024) return `${size} Б`;
@@ -175,12 +242,12 @@ const StoragePage = () => {
     <VStack spacing={6} mt={10}>
       <Text><strong>Пользователь:</strong> {user?.fullname || user?.username}</Text>
       <Heading size="lg">Мои файлы</Heading>
-
       <Text fontWeight="bold">Общий объём: {formatSize(totalSize)}</Text>
 
       <FormControl>
         <FormLabel>Загрузить файл</FormLabel>
-        <Input type="file" onChange={handleFileChange} />
+        {/* <Input type="file" onChange={handleFileChange} /> */}
+        <Input type="file" onChange={handleFileChange} ref={fileInputRef} />
         <Button mt={2} colorScheme="blue" onClick={handleUpload} isLoading={uploading}>
           Загрузить
         </Button>
@@ -221,9 +288,24 @@ const StoragePage = () => {
                   <Text><strong>Имя:</strong> {file.name}</Text>
                   <Text><strong>Размер:</strong> {formatSize(file.size)}</Text>
                   {file.comment && <Text><strong>Комментарий:</strong> {file.comment}</Text>}
+                  <Text><strong>Дата загрузки:</strong> {new Date(file.published).toLocaleString()}</Text>
+                  <Text><strong>Последнее скачивание:</strong> {file.last_download ? new Date(file.last_download).toLocaleString() : "Нет данных"}</Text>
                   <HStack mt={2}>
-                    <Button size="sm" onClick={() => startEditing(file)}>Редактировать</Button>
+                    <Button size="sm" colorScheme="yellow" onClick={() => startEditing(file)}>Редактировать</Button>
                     <Button size="sm" colorScheme="red" onClick={() => deleteFile(file.id)}>Удалить</Button>
+                    <Button size="sm" colorScheme="blue" onClick={() => copyLink(file.id)}>Скопировать ссылку</Button>
+                    <Button size="sm" colorScheme="green"
+                        onClick={() => {
+                          const link = document.createElement("a");
+                          link.href = file.download_url; // URL, предоставленный бекендом
+                          link.setAttribute("download", file.name); // имя файла при сохранении
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                      >
+                        Скачать
+                      </Button>
                   </HStack>
                 </>
               )}
