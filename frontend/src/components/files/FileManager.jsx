@@ -216,14 +216,54 @@ const FileManager = () => {
     };
 
     // Скачивание файла
-    const downloadFile = (fileId) => {
-        const url = `http://localhost:8000/api/storage/files/${fileId}/download/`;
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("Authorization", `Bearer ${authService.getToken()}`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    // const downloadFile = (fileId) => {
+    //     const url = `http://localhost:8000/api/storage/files/${fileId}/download/`;
+    //     const link = document.createElement("a");
+    //     link.href = url;
+    //     link.setAttribute("Authorization", `Bearer ${authService.getToken()}`);
+    //     document.body.appendChild(link);
+    //     link.click();
+    //     document.body.removeChild(link);
+    // };
+    // Скачивание файла с blob
+    const downloadFile = async (fileId, fileName) => {
+        try {
+            const response = await fetch(
+                `http://localhost:8000/api/storage/files/${fileId}/download/`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${authService.getToken()}`,
+                    },
+                }
+            );
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.setAttribute("download", fileName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                toast({
+                    title: "Файл скачан",
+                    status: "success",
+                    duration: 2000,
+                });
+            } else {
+                throw new Error("Ошибка скачивания");
+            }
+        } catch (error) {
+            toast({
+                title: "Ошибка скачивания файла",
+                description: error.message,
+                status: "error",
+                duration: 3000,
+            });
+        }
     };
 
     // Открытие модального окна редактирования
@@ -353,7 +393,10 @@ const FileManager = () => {
                                                     size='sm'
                                                     title='Скачать'
                                                     onClick={() =>
-                                                        downloadFile(file.id)
+                                                        downloadFile(
+                                                            file.id,
+                                                            file.name
+                                                        )
                                                     }
                                                 />
                                                 <IconButton
