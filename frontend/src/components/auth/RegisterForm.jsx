@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Box,
     Button,
@@ -34,7 +34,7 @@ const RegisterForm = () => {
     const borderColor = useColorModeValue("gray.200", "gray.600");
 
     // Если уже авторизован - редирект на файлы
-    React.useEffect(() => {
+    useEffect(() => {
         if (authService.isAuthenticated()) {
             navigate("/files");
         }
@@ -54,7 +54,7 @@ const RegisterForm = () => {
 
     // Валидация email согласно заданию
     const validateEmail = (email) => {
-        const regex = /^[\w\.-]+@[\w\.-]+\.\w+$/;
+        const regex = /^[\w.-]+@[\w.-]+\.\w+$/;
         if (!email) {
             return "Email обязателен";
         }
@@ -273,7 +273,7 @@ const RegisterForm = () => {
 
                     <Box textAlign='center'>
                         <Text fontSize='sm' color='gray.600'>
-                            Already have an account?{" "}
+                            Уже есть аккаунт?{" "}
                             <ChakraLink
                                 as={Link}
                                 to='/login'

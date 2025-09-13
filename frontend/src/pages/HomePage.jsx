@@ -1,4 +1,3 @@
-import React from "react";
 import {
     Box,
     Heading,
@@ -193,9 +192,6 @@ const HomePage = () => {
                             </Text>
                             <Text>
                                 Frontend: React 19 + Chakra UI + React Router
-                            </Text>
-                            <Text>
-                                Развертывание: Готово для размещения на reg.ru
                             </Text>
                         </VStack>
                     </VStack>

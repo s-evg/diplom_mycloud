@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Box,
     Button,
@@ -30,7 +30,7 @@ const LoginForm = () => {
     const borderColor = useColorModeValue("gray.200", "gray.600");
 
     // Если уже авторизован - редирект на файлы
-    React.useEffect(() => {
+    useEffect(() => {
         if (authService.isAuthenticated()) {
             navigate("/files");
         }
@@ -156,34 +156,6 @@ const LoginForm = () => {
                                 Зарегистрироваться
                             </ChakraLink>
                         </Text>
-                    </Box>
-
-                    {/* Демо данные для тестирования */}
-                    <Box
-                        bg='gray.50'
-                        p={4}
-                        borderRadius='md'
-                        w='full'
-                        border='1px'
-                        borderColor='gray.200'
-                    >
-                        <Text
-                            fontSize='sm'
-                            fontWeight='medium'
-                            mb={2}
-                            color='gray.700'
-                        >
-                            Тестовые аккаунты:
-                        </Text>
-                        <VStack spacing={1} fontSize='xs' color='gray.600'>
-                            <Text>
-                                <strong>Админ:</strong> admin / Admin123!
-                            </Text>
-                            <Text>
-                                <strong>Пользователь:</strong> testuser /
-                                TestPass123!
-                            </Text>
-                        </VStack>
                     </Box>
                 </VStack>
             </Box>

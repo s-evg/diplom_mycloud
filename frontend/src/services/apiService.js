@@ -71,10 +71,30 @@ class ApiService {
                 headers: this.getAuthHeaders(),
                 body: formData,
             });
+            const data = await response.json();
 
-            return await this.handleResponse(response);
+            if (response.ok) {
+                return { success: true, data };
+            } else {
+                // Более детальная обработка ошибок
+                if (data.name && data.name[0].includes("существует")) {
+                    return {
+                        success: false,
+                        error: "Файл с таким именем уже существует в хранилище",
+                    };
+                } else if (data.file && data.file[0].includes("существует")) {
+                    return {
+                        success: false,
+                        error: "Файл с таким именем уже существует в хранилище",
+                    };
+                }
+                return {
+                    success: false,
+                    error: data.detail || data.error || "Ошибка загрузки файла",
+                };
+            }
         } catch (error) {
-            return { success: false, error: "Ошибка загрузки файла" };
+            return { success: false, error: "Ошибка соединения с сервером" };
         }
     }
 

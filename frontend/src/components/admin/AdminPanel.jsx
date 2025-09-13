@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Box,
-    Button,
     VStack,
     HStack,
     Heading,
@@ -17,55 +16,29 @@ import {
     useToast,
     Container,
     Spinner,
-    useColorModeValue,
-    AlertDialog,
-    AlertDialogBody,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogContent,
-    AlertDialogOverlay,
-    useDisclosure,
+    Alert,
+    AlertIcon,
     Switch,
-    FormControl,
-    FormLabel,
+    useColorModeValue,
     Stat,
     StatLabel,
     StatNumber,
-    StatHelpText,
-    SimpleGrid,
-    Card,
-    CardBody,
+    StatGroup,
+    Divider,
 } from "@chakra-ui/react";
-import {
-    FiUsers,
-    FiTrash2,
-    FiRefreshCw,
-    FiSettings,
-    FiHardDrive,
-    FiFile,
-} from "react-icons/fi";
+import { FiTrash2, FiUsers } from "react-icons/fi";
 import apiService from "../../services/apiService";
 import authService from "../../services/authService";
 
 const AdminPanel = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [deleteUserId, setDeleteUserId] = useState(null);
-    const [toggleUserId, setToggleUserId] = useState(null);
-    const {
-        isOpen: isDeleteOpen,
-        onOpen: onDeleteOpen,
-        onClose: onDeleteClose,
-    } = useDisclosure();
-    const cancelRef = React.useRef();
 
     const toast = useToast();
     const bg = useColorModeValue("white", "gray.800");
-    const cardBg = useColorModeValue("gray.50", "gray.700");
     const currentUser = authService.getCurrentUser();
 
-    // Загрузка списка пользователей
-    const loadUsers = async () => {
+    const loadUsers = useCallback(async () => {
         setLoading(true);
         const result = await apiService.getUsers();
 
@@ -80,66 +53,51 @@ const AdminPanel = () => {
             });
         }
         setLoading(false);
-    };
-
+    }, [toast]);
     useEffect(() => {
         loadUsers();
-    }, []);
-
-    // Подтверждение удаления пользователя
-    const confirmDelete = (userId) => {
-        setDeleteUserId(userId);
-        onDeleteOpen();
-    };
+    }, [loadUsers]);
 
     // Удаление пользователя
-    const handleDeleteUser = async () => {
-        const result = await apiService.deleteUser(deleteUserId);
+    const handleDeleteUser = async (userId, username) => {
+        if (
+            !window.confirm(
+                `Вы уверены, что хотите удалить пользователя "${username}"? Это действие нельзя отменить. Все файлы пользователя будут удалены.`
+            )
+        ) {
+            return;
+        }
+
+        const result = await apiService.deleteUser(userId);
 
         if (result.success) {
             toast({
                 title: "Пользователь удален",
-                description: "Пользователь и все его файлы удалены",
+                description: `Пользователь ${username} и все его файлы удалены`,
                 status: "success",
                 duration: 3000,
             });
             loadUsers();
         } else {
             toast({
-                title: "Ошибка удаления",
+                title: "Ошибка удаления пользователя",
                 description: result.error,
                 status: "error",
                 duration: 3000,
             });
         }
-
-        onDeleteClose();
-        setDeleteUserId(null);
     };
 
     // Изменение прав администратора
-    const handleToggleAdmin = async (userId, currentIsAdmin) => {
-        // Нельзя снять права у самого себя
-        if (userId === currentUser?.id && currentIsAdmin) {
-            toast({
-                title: "Ошибка",
-                description: "Нельзя снять админские права у самого себя",
-                status: "warning",
-                duration: 3000,
-            });
-            return;
-        }
-
-        const result = await apiService.updateUserRights(
-            userId,
-            !currentIsAdmin
-        );
+    const handleToggleAdmin = async (userId, currentAdminStatus, username) => {
+        const newStatus = !currentAdminStatus;
+        const result = await apiService.updateUserRights(userId, newStatus);
 
         if (result.success) {
             toast({
-                title: currentIsAdmin ? "Права сняты" : "Права предоставлены",
-                description: `Пользователь ${
-                    !currentIsAdmin ? "получил" : "лишился"
+                title: "Права изменены",
+                description: `Пользователь ${username} ${
+                    newStatus ? "получил" : "лишен"
                 } прав администратора`,
                 status: "success",
                 duration: 3000,
@@ -155,23 +113,17 @@ const AdminPanel = () => {
         }
     };
 
-    // Подсчет общей статистики
-    const getTotalStats = () => {
-        const totalUsers = users.length;
-        const totalAdmins = users.filter((user) => user.is_admin).length;
-        const totalFiles = users.reduce(
-            (sum, user) => sum + (user.storage_stats?.file_count || 0),
-            0
-        );
-        const totalSize = users.reduce(
-            (sum, user) => sum + (user.storage_stats?.total_size_mb || 0),
-            0
-        );
-
-        return { totalUsers, totalAdmins, totalFiles, totalSize };
-    };
-
-    const stats = getTotalStats();
+    // Вычисляем статистику
+    const totalUsers = users.length;
+    const totalAdmins = users.filter((user) => user.is_admin).length;
+    const totalFiles = users.reduce(
+        (sum, user) => sum + (user.storage_stats?.file_count || 0),
+        0
+    );
+    const totalSize = users.reduce(
+        (sum, user) => sum + (user.storage_stats?.total_size_mb || 0),
+        0
+    );
 
     return (
         <Container maxW='6xl' py={8}>
@@ -179,259 +131,266 @@ const AdminPanel = () => {
                 {/* Заголовок */}
                 <HStack justify='space-between' align='center'>
                     <Heading size='lg' color='red.500'>
-                        Администрирование системы
+                        Административная панель
                     </Heading>
-                    <Button
-                        leftIcon={<FiRefreshCw />}
-                        onClick={loadUsers}
-                        variant='outline'
-                        size='sm'
-                    >
-                        Обновить
-                    </Button>
+                    {/* <Button
+            leftIcon={<FiRefreshCw />}
+            onClick={loadUsers}
+            variant="outline"
+            size="sm"
+          >
+            Обновить данные
+          </Button> */}
                 </HStack>
 
                 {/* Информация о текущем админе */}
-                <Box
-                    bg='red.50'
-                    p={4}
-                    borderRadius='md'
-                    border='1px'
-                    borderColor='red.200'
-                >
-                    <Text fontSize='sm'>
-                        Администратор: <strong>{currentUser?.username}</strong>
-                        <Badge ml={2} colorScheme='red'>
-                            ADMIN
-                        </Badge>
-                    </Text>
-                </Box>
+                <Alert status='info' borderRadius='md'>
+                    <AlertIcon />
+                    <Box>
+                        <Text fontWeight='medium'>
+                            Административный доступ:{" "}
+                            <strong>{currentUser?.username}</strong>
+                        </Text>
+                        <Text fontSize='sm' color='gray.600'>
+                            Управление пользователями и системными параметрами
+                        </Text>
+                    </Box>
+                </Alert>
 
-                {/* Общая статистика */}
-                <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                    <Card bg={cardBg}>
-                        <CardBody>
-                            <Stat>
-                                <StatLabel display='flex' alignItems='center'>
-                                    <FiUsers style={{ marginRight: "8px" }} />
-                                    Пользователи
-                                </StatLabel>
-                                <StatNumber>{stats.totalUsers}</StatNumber>
-                                <StatHelpText>
-                                    {stats.totalAdmins} админов
-                                </StatHelpText>
-                            </Stat>
-                        </CardBody>
-                    </Card>
-
-                    <Card bg={cardBg}>
-                        <CardBody>
-                            <Stat>
-                                <StatLabel display='flex' alignItems='center'>
-                                    <FiFile style={{ marginRight: "8px" }} />
-                                    Файлы
-                                </StatLabel>
-                                <StatNumber>{stats.totalFiles}</StatNumber>
-                                <StatHelpText>всего файлов</StatHelpText>
-                            </Stat>
-                        </CardBody>
-                    </Card>
-
-                    <Card bg={cardBg}>
-                        <CardBody>
-                            <Stat>
-                                <StatLabel display='flex' alignItems='center'>
-                                    <FiHardDrive
-                                        style={{ marginRight: "8px" }}
-                                    />
-                                    Объем
-                                </StatLabel>
-                                <StatNumber>
-                                    {stats.totalSize.toFixed(1)} MB
-                                </StatNumber>
-                                <StatHelpText>общий размер</StatHelpText>
-                            </Stat>
-                        </CardBody>
-                    </Card>
-
-                    <Card bg={cardBg}>
-                        <CardBody>
-                            <Stat>
-                                <StatLabel>Средний размер</StatLabel>
-                                <StatNumber>
-                                    {stats.totalFiles > 0
-                                        ? (
-                                              stats.totalSize / stats.totalFiles
-                                          ).toFixed(2)
-                                        : "0"}{" "}
-                                    MB
-                                </StatNumber>
-                                <StatHelpText>на файл</StatHelpText>
-                            </Stat>
-                        </CardBody>
-                    </Card>
-                </SimpleGrid>
-
-                {/* Таблица пользователей */}
+                {/* Общая статистика системы */}
                 <Box
                     bg={bg}
+                    p={6}
                     borderRadius='lg'
-                    overflow='hidden'
                     boxShadow='sm'
                     border='1px'
                     borderColor='gray.200'
                 >
+                    <Heading size='md' mb={4} color='gray.700'>
+                        <FiUsers
+                            style={{ display: "inline", marginRight: "8px" }}
+                        />
+                        Статистика системы
+                    </Heading>
+                    <StatGroup>
+                        <Stat>
+                            <StatLabel>Всего пользователей</StatLabel>
+                            <StatNumber color='blue.500'>
+                                {totalUsers}
+                            </StatNumber>
+                        </Stat>
+                        <Stat>
+                            <StatLabel>Администраторов</StatLabel>
+                            <StatNumber color='red.500'>
+                                {totalAdmins}
+                            </StatNumber>
+                        </Stat>
+                        <Stat>
+                            <StatLabel>Всего файлов</StatLabel>
+                            <StatNumber color='green.500'>
+                                {totalFiles}
+                            </StatNumber>
+                        </Stat>
+                        <Stat>
+                            <StatLabel>Общий объем</StatLabel>
+                            <StatNumber color='purple.500'>
+                                {totalSize.toFixed(2)} MB
+                            </StatNumber>
+                        </Stat>
+                    </StatGroup>
+                </Box>
+
+                <Divider />
+
+                {/* Управление пользователями */}
+                <Box>
+                    <Heading size='md' mb={4} color='gray.700'>
+                        Управление пользователями
+                    </Heading>
+
                     <Box
-                        p={4}
-                        bg='gray.50'
-                        borderBottom='1px'
+                        bg={bg}
+                        borderRadius='lg'
+                        overflow='hidden'
+                        boxShadow='sm'
+                        border='1px'
                         borderColor='gray.200'
                     >
-                        <Heading size='md'>Управление пользователями</Heading>
-                    </Box>
-
-                    {loading ? (
-                        <Box p={8} textAlign='center'>
-                            <Spinner size='lg' color='red.500' />
-                            <Text mt={4} color='gray.600'>
-                                Загрузка пользователей...
-                            </Text>
-                        </Box>
-                    ) : (
-                        <Table variant='simple'>
-                            <Thead bg='gray.50'>
-                                <Tr>
-                                    <Th>ID</Th>
-                                    <Th>Пользователь</Th>
-                                    <Th>Email</Th>
-                                    <Th>Файлы</Th>
-                                    <Th>Размер</Th>
-                                    <Th>Права</Th>
-                                    <Th>Действия</Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {users.map((user) => (
-                                    <Tr key={user.id}>
-                                        <Td>{user.id}</Td>
-                                        <Td>
-                                            <Text fontWeight='medium'>
-                                                {user.username}
-                                            </Text>
-                                        </Td>
-                                        <Td>{user.email}</Td>
-                                        <Td>
-                                            <Text>
-                                                {user.storage_stats
-                                                    ?.file_count || 0}
-                                            </Text>
-                                        </Td>
-                                        <Td>
-                                            <Text>
-                                                {(
-                                                    user.storage_stats
-                                                        ?.total_size_mb || 0
-                                                ).toFixed(1)}{" "}
-                                                MB
-                                            </Text>
-                                        </Td>
-                                        <Td>
-                                            <HStack>
-                                                <FormControl
-                                                    display='flex'
-                                                    alignItems='center'
+                        {loading ? (
+                            <Box p={8} textAlign='center'>
+                                <Spinner size='lg' color='blue.500' />
+                                <Text mt={4} color='gray.600'>
+                                    Загрузка пользователей...
+                                </Text>
+                            </Box>
+                        ) : (
+                            <Table variant='simple'>
+                                <Thead bg='gray.50'>
+                                    <Tr>
+                                        <Th>Пользователь</Th>
+                                        <Th>Email</Th>
+                                        <Th>Права доступа</Th>
+                                        <Th>Файловое хранилище</Th>
+                                        <Th>Действия</Th>
+                                    </Tr>
+                                </Thead>
+                                <Tbody>
+                                    {users.map((user) => (
+                                        <Tr key={user.id}>
+                                            <Td>
+                                                <VStack
+                                                    align='start'
+                                                    spacing={1}
                                                 >
-                                                    <Switch
-                                                        isChecked={
+                                                    <Text fontWeight='medium'>
+                                                        {user.username}
+                                                    </Text>
+                                                    {user.id ===
+                                                        currentUser?.id && (
+                                                        <Badge
+                                                            colorScheme='blue'
+                                                            size='sm'
+                                                        >
+                                                            Текущий админ
+                                                        </Badge>
+                                                    )}
+                                                </VStack>
+                                            </Td>
+                                            <Td>
+                                                <Text fontSize='sm'>
+                                                    {user.email}
+                                                </Text>
+                                            </Td>
+                                            <Td>
+                                                <VStack
+                                                    align='start'
+                                                    spacing={2}
+                                                >
+                                                    <Badge
+                                                        colorScheme={
                                                             user.is_admin
+                                                                ? "red"
+                                                                : "gray"
                                                         }
-                                                        onChange={() =>
-                                                            handleToggleAdmin(
-                                                                user.id,
+                                                        variant={
+                                                            user.is_admin
+                                                                ? "solid"
+                                                                : "outline"
+                                                        }
+                                                    >
+                                                        {user.is_admin
+                                                            ? "Администратор"
+                                                            : "Пользователь"}
+                                                    </Badge>
+                                                    <HStack>
+                                                        <Text
+                                                            fontSize='xs'
+                                                            color='gray.600'
+                                                        >
+                                                            Админ права:
+                                                        </Text>
+                                                        <Switch
+                                                            size='sm'
+                                                            isChecked={
                                                                 user.is_admin
+                                                            }
+                                                            onChange={() =>
+                                                                handleToggleAdmin(
+                                                                    user.id,
+                                                                    user.is_admin,
+                                                                    user.username
+                                                                )
+                                                            }
+                                                            isDisabled={
+                                                                user.id ===
+                                                                currentUser?.id
+                                                            }
+                                                        />
+                                                    </HStack>
+                                                </VStack>
+                                            </Td>
+                                            <Td>
+                                                <VStack
+                                                    align='start'
+                                                    spacing={1}
+                                                >
+                                                    <Text fontSize='sm'>
+                                                        <strong>
+                                                            {user.storage_stats
+                                                                ?.file_count ||
+                                                                0}
+                                                        </strong>{" "}
+                                                        файлов
+                                                    </Text>
+                                                    <Text
+                                                        fontSize='xs'
+                                                        color='gray.600'
+                                                    >
+                                                        {(
+                                                            user.storage_stats
+                                                                ?.total_size_mb ||
+                                                            0
+                                                        ).toFixed(2)}{" "}
+                                                        MB
+                                                    </Text>
+                                                </VStack>
+                                            </Td>
+                                            <Td>
+                                                <VStack spacing={2}>
+                                                    <IconButton
+                                                        icon={<FiTrash2 />}
+                                                        size='sm'
+                                                        colorScheme='red'
+                                                        variant='outline'
+                                                        title='Удалить пользователя'
+                                                        onClick={() =>
+                                                            handleDeleteUser(
+                                                                user.id,
+                                                                user.username
                                                             )
                                                         }
-                                                        colorScheme='red'
-                                                        size='sm'
                                                         isDisabled={
                                                             user.id ===
-                                                                currentUser?.id &&
-                                                            user.is_admin
+                                                            currentUser?.id
                                                         }
                                                     />
-                                                </FormControl>
-                                                <Badge
-                                                    colorScheme={
-                                                        user.is_admin
-                                                            ? "red"
-                                                            : "gray"
-                                                    }
-                                                    size='sm'
-                                                >
-                                                    {user.is_admin
-                                                        ? "ADMIN"
-                                                        : "USER"}
-                                                </Badge>
-                                            </HStack>
-                                        </Td>
-                                        <Td>
-                                            <HStack spacing={2}>
-                                                <IconButton
-                                                    icon={<FiTrash2 />}
-                                                    size='sm'
-                                                    colorScheme='red'
-                                                    title='Удалить пользователя'
-                                                    onClick={() =>
-                                                        confirmDelete(user.id)
-                                                    }
-                                                    isDisabled={
-                                                        user.id ===
-                                                        currentUser?.id
-                                                    }
-                                                />
-                                            </HStack>
-                                        </Td>
-                                    </Tr>
-                                ))}
-                            </Tbody>
-                        </Table>
-                    )}
+                                                    {user.id ===
+                                                        currentUser?.id && (
+                                                        <Text
+                                                            fontSize='xs'
+                                                            color='gray.500'
+                                                            textAlign='center'
+                                                        >
+                                                            Нельзя удалить себя
+                                                        </Text>
+                                                    )}
+                                                </VStack>
+                                            </Td>
+                                        </Tr>
+                                    ))}
+                                </Tbody>
+                            </Table>
+                        )}
+                    </Box>
+                </Box>
+
+                {/* Информационное сообщение */}
+                <Box
+                    bg='blue.50'
+                    p={4}
+                    borderRadius='md'
+                    border='1px'
+                    borderColor='blue.200'
+                >
+                    <Text fontSize='sm' color='blue.800'>
+                        <strong>Примечание:</strong> Для управления файлами
+                        пользователей используйте раздел "Мои файлы" с
+                        возможностью выбора пользователя (доступно
+                        администраторам). Данная панель предназначена только для
+                        управления пользователями и системными параметрами.
+                    </Text>
                 </Box>
             </VStack>
-
-            {/* Диалог подтверждения удаления */}
-            <AlertDialog
-                isOpen={isDeleteOpen}
-                leastDestructiveRef={cancelRef}
-                onClose={onDeleteClose}
-            >
-                <AlertDialogOverlay>
-                    <AlertDialogContent>
-                        <AlertDialogHeader fontSize='lg' fontWeight='bold'>
-                            Удалить пользователя
-                        </AlertDialogHeader>
-
-                        <AlertDialogBody>
-                            Вы уверены, что хотите удалить этого пользователя?
-                            Все его файлы также будут удалены. Это действие
-                            нельзя отменить.
-                        </AlertDialogBody>
-
-                        <AlertDialogFooter>
-                            <Button ref={cancelRef} onClick={onDeleteClose}>
-                                Отмена
-                            </Button>
-                            <Button
-                                colorScheme='red'
-                                onClick={handleDeleteUser}
-                                ml={3}
-                            >
-                                Удалить
-                            </Button>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialogOverlay>
-            </AlertDialog>
         </Container>
     );
 };

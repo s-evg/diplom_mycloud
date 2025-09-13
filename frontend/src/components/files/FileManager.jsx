@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Box,
     Button,
@@ -25,13 +25,12 @@ import {
     Input,
     Textarea,
     Switch,
-    Alert,
-    AlertIcon,
     Badge,
     useToast,
     Container,
     Spinner,
     useColorModeValue,
+    Select,
 } from "@chakra-ui/react";
 import {
     FiUpload,
@@ -40,7 +39,6 @@ import {
     FiTrash2,
     FiLink,
     FiEye,
-    FiRefreshCw,
 } from "react-icons/fi";
 import apiService from "../../services/apiService";
 import authService from "../../services/authService";
@@ -71,11 +69,21 @@ const FileManager = () => {
     const bg = useColorModeValue("white", "gray.800");
     const currentUser = authService.getCurrentUser();
 
-    // Загрузка списка файлов
-    const loadFiles = async () => {
-        setLoading(true);
-        const result = await apiService.getFiles();
+    const [allUsers, setAllUsers] = useState([]);
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const loadAllUsers = async () => {
+        if (authService.isAdmin()) {
+            const result = await apiService.getUsers();
+            if (result.success) {
+                setAllUsers(result.data);
+            }
+        }
+    };
 
+    // Загрузка списка файлов
+    const loadFiles = useCallback(async () => {
+        setLoading(true);
+        const result = await apiService.getFiles(selectedUserId);
         if (result.success) {
             setFiles(result.data);
         } else {
@@ -87,11 +95,13 @@ const FileManager = () => {
             });
         }
         setLoading(false);
-    };
+    }, [selectedUserId, toast]);
 
     useEffect(() => {
         loadFiles();
-    }, []);
+        // Mode is Dirty Harry
+        loadAllUsers();
+    }, [selectedUserId]);
 
     // Загрузка файла
     const handleUpload = async () => {
@@ -117,8 +127,11 @@ const FileManager = () => {
                 status: "success",
                 duration: 3000,
             });
+            //Очищаем форму
             setUploadData({ file: null, comment: "", isPublic: false });
+            // Закрываем модальное окно
             onUploadClose();
+            // Обновляем список файлов
             loadFiles();
         } else {
             toast({
@@ -216,16 +229,6 @@ const FileManager = () => {
     };
 
     // Скачивание файла
-    // const downloadFile = (fileId) => {
-    //     const url = `http://localhost:8000/api/storage/files/${fileId}/download/`;
-    //     const link = document.createElement("a");
-    //     link.href = url;
-    //     link.setAttribute("Authorization", `Bearer ${authService.getToken()}`);
-    //     document.body.appendChild(link);
-    //     link.click();
-    //     document.body.removeChild(link);
-    // };
-    // Скачивание файла с blob
     const downloadFile = async (fileId, fileName) => {
         try {
             const response = await fetch(
@@ -266,6 +269,14 @@ const FileManager = () => {
         }
     };
 
+    const handleUploadClose = () => {
+        setUploadData({ file: null, comment: "", isPublic: false });
+        // Принудительный сброс input file. Иногда после загрузки файла, кнопка Загрузить файл не срабатывает
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) fileInput.value = "";
+        onUploadClose();
+    };
+
     // Открытие модального окна редактирования
     const openEditModal = (file) => {
         setSelectedFile({ ...file, newName: file.name });
@@ -282,14 +293,6 @@ const FileManager = () => {
                     </Heading>
                     <HStack>
                         <Button
-                            leftIcon={<FiRefreshCw />}
-                            onClick={loadFiles}
-                            variant='outline'
-                            size='sm'
-                        >
-                            Обновить
-                        </Button>
-                        <Button
                             leftIcon={<FiUpload />}
                             colorScheme='blue'
                             onClick={onUploadOpen}
@@ -298,7 +301,44 @@ const FileManager = () => {
                         </Button>
                     </HStack>
                 </HStack>
-
+                {/* Селектор пользователя для админов */}
+                {authService.isAdmin() && allUsers.length > 0 && (
+                    <Box
+                        bg='red.50'
+                        p={4}
+                        borderRadius='md'
+                        border='1px'
+                        borderColor='red.200'
+                    >
+                        <FormControl>
+                            <FormLabel fontSize='sm' color='red.800' mb={2}>
+                                Управление файлами пользователя (только для
+                                администраторов):
+                            </FormLabel>
+                            <Select
+                                placeholder='Выберите пользователя или оставьте пустым для своих файлов'
+                                value={selectedUserId || ""}
+                                onChange={(e) => {
+                                    const userId = e.target.value
+                                        ? parseInt(e.target.value)
+                                        : null;
+                                    setSelectedUserId(userId);
+                                }}
+                                bg='white'
+                                size='sm'
+                            >
+                                {allUsers.map((user) => (
+                                    <option key={user.id} value={user.id}>
+                                        {user.username} ({user.email})
+                                        {user.id === currentUser?.id
+                                            ? " - Ваши файлы"
+                                            : ""}
+                                    </option>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+                )}
                 {/* Информация о пользователе */}
                 <Box bg='blue.50' p={4} borderRadius='md'>
                     <Text fontSize='sm'>
@@ -450,7 +490,7 @@ const FileManager = () => {
             </VStack>
 
             {/* Модальное окно загрузки */}
-            <Modal isOpen={isUploadOpen} onClose={onUploadClose}>
+            <Modal isOpen={isUploadOpen} onClose={handleUploadClose}>
                 <ModalOverlay />
                 <ModalContent>
                     <ModalHeader>Загрузить файл</ModalHeader>
@@ -460,12 +500,26 @@ const FileManager = () => {
                                 <FormLabel>Выберите файл</FormLabel>
                                 <Input
                                     type='file'
+                                    // Принудительный ре-рендер
+                                    // key={
+                                    //     uploadData.file
+                                    //         ? uploadData.file.name
+                                    //         : "file-input"
+                                    // }
                                     onChange={(e) =>
                                         setUploadData((prev) => ({
                                             ...prev,
                                             file: e.target.files[0],
                                         }))
                                     }
+                                    p={1}
+                                    border='2px dashed'
+                                    borderColor='gray.300'
+                                    _hover={{ borderColor: "blue.400" }}
+                                    _focus={{
+                                        borderColor: "blue.500",
+                                        boxShadow: "outline",
+                                    }}
                                 />
                             </FormControl>
 
@@ -498,7 +552,7 @@ const FileManager = () => {
                         </VStack>
                     </ModalBody>
                     <ModalFooter>
-                        <Button mr={3} onClick={onUploadClose}>
+                        <Button mr={3} onClick={handleUploadClose}>
                             Отмена
                         </Button>
                         <Button

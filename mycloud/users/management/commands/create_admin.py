@@ -8,7 +8,7 @@ class Command(BaseCommand):
     help = 'Создаем пользователя admin с правами администратора'
 
     def handle(self, *args, **options):
-        username = 'admin2'
+        username = 'admin'
 
         if User.objects.filter(username=username).exists():
             self.stdout.write(
@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
         admin_user = User.objects.create_user(
             username=username,
-            email='admin2@mycloud.com',
+            email='admin@admin.ru',
             password='Admin123!',
             first_name='Системный администратор',
             is_admin=True,

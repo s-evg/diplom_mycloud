@@ -1,4 +1,3 @@
-import React from "react";
 import { ChakraProvider, Box } from "@chakra-ui/react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navigation from "./components/layout/Navigation.jsx";
