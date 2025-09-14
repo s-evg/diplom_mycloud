@@ -93,3 +93,47 @@ python manage.py runserver
 
 Админка доступна по адресу
 http://127.0.0.1:8000/admin/
+
+## Endpoints (Удобно тестировать через POSTMAN) 
+
+Сервер должен быть запущен на момент тестирования командой
+```bash
+python manage.py runserver
+```
+
+### Пользователи
+
+POST `http://localhost:8000/api/auth/register/` - регистрация пользователя
+GET `http://localhost:8000/api/auth/user/` - получение информации о пользователе (требуется передавать ключ Authorization: Bearer JWT-токен пользователя)
+POST `http://localhost:8000/api/storage/files/` - Добавление файла в репозиторий пользователя (требуется передавать ключ Authorization: Bearer JWT-токен пользователя)
+GET `http://localhost:8000/api/storage/files/` - Получение списка файлов пользователя (требуется передавать ключ Authorization: Bearer JWT-токен пользователя)
+GET 'http://localhost:8000/api/storage/files/ID/download/' - Получение информации на приватный файл, где ID - идентификатор файла (требуется передавать ключ Authorization: Bearer JWT-токен пользователя)
+GET `http://localhost:8000/api/storage/files/LINK/download/` - Получение файла по ссылке без авторизации, где LINK - ссылка на файл, которую можно узнать командами выше.
+PATCH `http://localhost:8000/api/storage/files/ID/` - Изменение приватности файла, где ID - идентификатор файла (требуется передавать ключ Authorization: Bearer JWT-токен пользователя), данные об изменении приватности передаются через JSON, где булево значение определяет публичность файла
+```bash
+{ 
+    "is_public": true 
+}
+```
+### Администратор
+
+POST `http://localhost:8000/api/auth/token/` - Передаем через JSON логин и пароль админа, чтобы получить его access JWT-токен ответом, который необходим в следующих ендпоинтах.
+```bash
+{ 
+    "username": "логин админа",
+    "password": "пароль админа"
+}
+```
+
+GET `http://localhost:8000/api/auth/admin/users/` - Получение информации о всех пользователях, их количестве и общем размере файлов.
+GET `http://localhost:8000/api/storage/files/?user_id=ID` - Получение информации о конкретном пользователе и его хранилище с информацией по каждому файлу, где ID - это id пользователя (требуется передавать ключ Authorization: Bearer JWT-токен администратора). 
+DEL `http://localhost:8000/api/storage/files/ID/` - Удаление файла пользователя, где ID - это идентификатор файла
+DEL `http://localhost:8000/api/auth/admin/users/ID/` - Удаление профиля пользователя, где ID - это идентификатор пользователя
+PATCH `http://localhost:8000/api/auth/admin/users/ID/` - Изменение прав пользователя, где ID - это идентификатор пользователя, данные передаются через JSON, например
+```bash
+{
+    "is_admin":true
+}
+```
+
+
