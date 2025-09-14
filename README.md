@@ -5,7 +5,7 @@
 
 
 [Backend](/mycloud/README.MD) \
-[Frontend](/frontend/README.MD)
+[Frontend](/frontend/README.md) \
 
 
 
