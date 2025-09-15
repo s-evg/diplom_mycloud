@@ -232,7 +232,8 @@ const FileManager = () => {
     const downloadFile = async (fileId, fileName) => {
         try {
             const response = await fetch(
-                `http://localhost:8000/api/storage/files/${fileId}/download/`,
+                // `http://localhost:8000/api/storage/files/${fileId}/download/`,
+                `/api/storage/files/${fileId}/download/`,
                 {
                     headers: {
                         Authorization: `Bearer ${authService.getToken()}`,

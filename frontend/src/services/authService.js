@@ -1,4 +1,6 @@
-const API_BASE_URL = "http://localhost:8000/api/auth";
+// const API_BASE_URL = "http://localhost:8000/api"/;  // так не должно быть!
+
+const API_BASE_URL = "/api";  // так должно быть правильно!
 
 class AuthService {
     // Получение access токена из localStorage
