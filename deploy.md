@@ -149,8 +149,8 @@ ssh root@IP
       [Service]
       User=admin
       Group=www-data
-      WorkingDirectory=/home/admin/diplom_my_cloud/mycloud
-      ExecStart=/home/admin/diplom_my_cloud/mycloud/venv/bin/gunicorn \
+      WorkingDirectory=/home/admin/diplom_mycloud/mycloud
+      ExecStart=/home/admin/diplom_mycloud/mycloud/venv/bin/gunicorn \
                --access-logfile - \
                --workers 3 \
                --bind unix:/run/gunicorn.sock \
@@ -184,7 +184,7 @@ ssh root@IP
       server {
          listen 80;
          server_name <ИМЯ ДОМЕНА ИЛИ IP АДРЕС СЕРВЕРА>;
-         root /home/admin/diplom_my_cloud/frontend/dist;
+         root /home/admin/diplom_mycloud/frontend/dist;
          index index.html index.htm;
          try_files $uri $uri/ /index.html;
 
@@ -194,11 +194,11 @@ ssh root@IP
          }
 
          location /static/ {
-            alias /home/admin/diplom_my_cloud/mycloud/static/;
+            alias /home/admin/diplom_mycloud/mycloud/static/;
          }
 
          location /media/ {
-            alias /home/admin/diplom_my_cloud/mycloud/media/;
+            alias /home/admin/diplom_mycloud/mycloud/media/;
          }
 
          location /admindjango/ {
@@ -227,6 +227,92 @@ ssh root@IP
    `sudo ufw allow 'Nginx Full'`
 
     ---
+40. Устанавливаем [Node Version Manager](https://github.com/nvm-sh/nvm) (nvm):\
+   `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash`
+41. Добавляем переменную окружения:
 
+      ```bash
+      export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      ```
 
-Помощь по развертыванию черпал с источника [HABR](https://habr.com/ru/articles/501414/)
+42. Проверяем версию `nvm`:\
+   `nvm -v`
+43. Устанавливаем нужную версию `node`:\
+   `nvm install <НОМЕР ВЕРСИИ>`
+44. Проверяем версию `node`:\
+   `node -v`
+45. Проверяем версию `npm`:\
+   `npm -v`
+
+    ---
+46. Переходим в папку проекта `frontend`:\
+   `cd /home/<ИМЯ ПОЛЬЗОВАТЕЛЯ>/Diplom_MyCloud/frontend`
+47. В папке `frontend/src` в файле `config.ts` редактируем базовый URL:\
+   `nano config.ts`\
+   `const API_BASE_URL = 'http://<IP АДРЕС СЕРВЕРА>:8000';`
+48. Устанавливаем зависимости:\
+   `npm i`
+
+    ---
+
+49. В папке `frontend` создаем файл `start.sh`:\
+   `nano start.sh`
+
+      ```sh
+      #!/bin/bash
+      . /home/admin/.nvm/nvm.sh
+      npm run build
+      ```
+
+50. Делаем файл `start.sh` исполняемым:\
+   `sudo chmod +x /home/admin/diplom_mycloud/frontend/start.sh`
+
+    ---
+
+51. Создаем файл `frontend.service`:\
+   `sudo nano /etc/systemd/system/frontend.service`
+
+      ```ini
+      [Unit]
+      Description=frontend service
+      After=network.target
+
+      [Service]
+      User=admin
+      Group=www-data
+      WorkingDirectory=/home/admin/diplom_mycloud/frontend
+      ExecStart=/home/admin/diplom_mycloud/frontend/start.sh
+
+      [Install]
+      WantedBy=multi-user.target
+      ```
+
+    ---
+
+52. Запускаем сервис `frontend`:\
+   `sudo systemctl start frontend`\
+   `sudo systemctl enable frontend`
+53. Проверяем статус сервиса `frontend`:\
+   `sudo systemctl status frontend`
+
+    ---
+
+54. Запускаем сервер с помощью `gunicorn` и команды `nohup`:\
+   `nohup gunicorn backend_project.wsgi -b 0.0.0.0:8000 > gunicorn.log 2>&1 &`
+
+      ***Объяснение команды:***
+      - **nohup** — запускает процесс так, что он не завершится при выходе из системы.
+      - **gunicorn backend_project.wsgi -b 0.0.0.0:8000** — указывает команду для запуска сервера gunicorn.
+      - **gunicorn.log** — перенаправляет стандартный вывод (stdout) в файл gunicorn.log.
+      - **2>&1** — перенаправляет стандартный вывод ошибок (stderr) в тот же файл, что и стандартный вывод, то есть все логи будут записаны в gunicorn.log.
+      - **&** — запускает процесс в фоновом режиме.
+
+    ---
+
+55. Проверяем доступность сайта по адресу:\
+   `http://<IP АДРЕС СЕРВЕРА>`
+56. Проверяем доступность Django administration по адресу:\
+   `http://<IP АДРЕС СЕРВЕРА>/admin/`
+
+Помощь по развертыванию черпал из лекции Нетологии и источника [HABR](https://habr.com/ru/articles/501414/)
