@@ -190,7 +190,7 @@ class FileDownloadView(APIView):
     authentication_classes = []
 
     def get(self, request, link_download):
-        print(f"FileDownloadView called with: {link_download}")  # Отладка
+        print(f"FileDownloadView called with: {link_download}")
 
         try:
             file_obj = File.objects.get(link_download=link_download)
