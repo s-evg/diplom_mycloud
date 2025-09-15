@@ -110,9 +110,123 @@ ssh root@IP
     либо готовым скриптом: \
     `python manage.py create_admin`
    *Суперпользователь позволят входить как в "Django administration", так и в "Административный интерфейс" на фронте сайта после входа.*
-25. Собираем весь статичный контент в одной папке (`static`) на сервере:\
+24. Собираем весь статичный контент в одной папке (`static`) на сервере:\
    `python manage.py collectstatic`
-26. Запускаем сервер:\
+25. Запускаем сервер:\
    `python manage.py runserver 0.0.0.0:8000`
 
+    После этого уже можно коннектиться к серверу по дресу вашего сервера http://Ваш_ip_сервера:8000/admin/ Например у меня `http://194.67.88.118:8000/admin/`
+
     ---
+
+26. Проверяем работу gunicorn: \
+    `gunicorn --bind 0.0.0.0:8000 mycloud.wsgi`
+27. Создаем файл `gunicorn.socket`:\
+   `sudo nano /etc/systemd/system/gunicorn.socket`
+
+      ```ini
+      [Unit]
+      Description=gunicorn socket
+
+      [Socket]
+      ListenStream=/run/gunicorn.sock
+
+      [Install]
+      WantedBy=sockets.target
+      ```
+
+    ---
+
+28. Создаем файл `gunicorn.service`:\
+   `sudo nano /etc/systemd/system/gunicorn.service`
+
+      ```ini
+      [Unit]
+      Description=gunicorn daemon
+      Requires=gunicorn.socket
+      After=network.target
+
+      [Service]
+      User=admin
+      Group=www-data
+      WorkingDirectory=/home/admin/diplom_my_cloud/mycloud
+      ExecStart=/home/admin/diplom_my_cloud/mycloud/venv/bin/gunicorn \
+               --access-logfile - \
+               --workers 3 \
+               --bind unix:/run/gunicorn.sock \
+               mycloud.wsgi:application
+
+      [Install]
+      WantedBy=multi-user.target
+      ```
+    ---
+
+29. Запускаем файл `gunicorn.socket`:\
+   `sudo systemctl start gunicorn.socket`\
+   `sudo systemctl enable gunicorn.socket`
+30. Проверяем статус файла `gunicorn.socket`:\
+   `sudo systemctl status gunicorn.socket`
+31. Убеждаемся что файл `gunicorn.sock` присутствует в папке `/run`:\
+   `file /run/gunicorn.sock`
+32. Проверяем статус `gunicorn`:\
+   `sudo systemctl status gunicorn`
+
+      Если `gunicorn` не активен, то запускаем его:\
+      `sudo systemctl start gunicorn;`\
+      `sudo systemctl enable gunicorn;`
+
+    ---
+
+33. Создаем модуль `nginx`:\
+   `sudo nano /etc/nginx/sites-available/mycloud`
+
+      ```ini
+      server {
+         listen 80;
+         server_name <ИМЯ ДОМЕНА ИЛИ IP АДРЕС СЕРВЕРА>;
+         root /home/admin/diplom_my_cloud/frontend/dist;
+         index index.html index.htm;
+         try_files $uri $uri/ /index.html;
+
+         location = /favicon.ico {
+            access_log off;
+            log_not_found off;
+         }
+
+         location /static/ {
+            alias /home/admin/diplom_my_cloud/mycloud/static/;
+         }
+
+         location /media/ {
+            alias /home/admin/diplom_my_cloud/mycloud/media/;
+         }
+
+         location /admindjango/ {
+            proxy_pass http://unix:/run/gunicorn.sock;
+            include proxy_params;
+         }
+
+         location /api/ {
+            proxy_pass http://unix:/run/gunicorn.sock;
+            include proxy_params;
+         }
+      }
+      ```
+
+34. Создаем символическую ссылку:\
+   `sudo ln -s /etc/nginx/sites-available/mycloud /etc/nginx/sites-enabled`
+35. Добавляем пользователя `www-data` в группу текущего пользователя:\
+   `sudo usermod -a -G ${admin} www-data`
+36. Диагностируем `nginx` на предмет ошибок в синтаксисе:\
+   `sudo nginx -t`
+37. Перезапускаем веб-сервер:\
+   `sudo systemctl restart nginx`
+38. Проверяем статус `nginx`:\
+   `sudo systemctl status nginx`
+39. При помощи `firewall` даем полные права `nginx` для подключений:\
+   `sudo ufw allow 'Nginx Full'`
+
+    ---
+
+
+Помощь по развертыванию черпал с источника [HABR](https://habr.com/ru/articles/501414/)
