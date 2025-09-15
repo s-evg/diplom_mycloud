@@ -184,7 +184,7 @@ ssh root@IP
       server {
          listen 80;
          server_name <ИМЯ ДОМЕНА ИЛИ IP АДРЕС СЕРВЕРА>;
-         root /home/admin/diplom_mycloud/frontend/dist;
+         root /home/admin/diplom_mycloud/frontend/build;
          index index.html index.htm;
          try_files $uri $uri/ /index.html;
 
@@ -248,15 +248,17 @@ ssh root@IP
     ---
 46. Переходим в папку проекта `frontend`:\
    `cd /home/<ИМЯ ПОЛЬЗОВАТЕЛЯ>/Diplom_MyCloud/frontend`
-47. В папке `frontend/src` в файле `config.ts` редактируем базовый URL:\
-   `nano config.ts`\
+47. В папке `frontend/src/services` в файлах `apiService.js` и `authService.js`редактируем базовый URL:\
+   `nano apiService.js`\
    `const API_BASE_URL = 'http://<IP АДРЕС СЕРВЕРА>:8000';`
-48. Устанавливаем зависимости:\
+   `nano authService.js`\
+   `const API_BASE_URL = 'http://<IP АДРЕС СЕРВЕРА>:8000';
+49. Устанавливаем зависимости:\
    `npm i`
 
     ---
 
-49. В папке `frontend` создаем файл `start.sh`:\
+50. В папке `frontend` создаем файл `start.sh`:\
    `nano start.sh`
 
       ```sh
@@ -265,12 +267,12 @@ ssh root@IP
       npm run build
       ```
 
-50. Делаем файл `start.sh` исполняемым:\
+51. Делаем файл `start.sh` исполняемым:\
    `sudo chmod +x /home/admin/diplom_mycloud/frontend/start.sh`
 
     ---
 
-51. Создаем файл `frontend.service`:\
+52. Создаем файл `frontend.service`:\
    `sudo nano /etc/systemd/system/frontend.service`
 
       ```ini
@@ -290,15 +292,15 @@ ssh root@IP
 
     ---
 
-52. Запускаем сервис `frontend`:\
+53. Запускаем сервис `frontend`:\
    `sudo systemctl start frontend`\
    `sudo systemctl enable frontend`
-53. Проверяем статус сервиса `frontend`:\
+54. Проверяем статус сервиса `frontend`:\
    `sudo systemctl status frontend`
 
     ---
 
-54. Запускаем сервер с помощью `gunicorn` и команды `nohup`:\
+55. Запускаем сервер с помощью `gunicorn` и команды `nohup`:\
    `nohup gunicorn backend_project.wsgi -b 0.0.0.0:8000 > gunicorn.log 2>&1 &`
 
       ***Объяснение команды:***
@@ -310,9 +312,9 @@ ssh root@IP
 
     ---
 
-55. Проверяем доступность сайта по адресу:\
+56. Проверяем доступность сайта по адресу:\
    `http://<IP АДРЕС СЕРВЕРА>`
-56. Проверяем доступность Django administration по адресу:\
+57. Проверяем доступность Django administration по адресу:\
    `http://<IP АДРЕС СЕРВЕРА>/admin/`
 
 Помощь по развертыванию черпал из лекции Нетологии и источника [HABR](https://habr.com/ru/articles/501414/)
