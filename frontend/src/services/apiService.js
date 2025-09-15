@@ -1,6 +1,8 @@
 import authService from "./authService";
 
-const API_BASE_URL = "http://localhost:8000/api";
+// const API_BASE_URL = "http://localhost:8000/api"/;  // так не должно быть!
+
+const API_BASE_URL = "/api";  // так должно быть правильно!
 
 class ApiService {
     // Получение заголовков с авторизацией
