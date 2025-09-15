@@ -27,8 +27,8 @@ FROM nginx:alpine
 # Копируем собранные файлы из этапа builder в папку по умолчанию для Nginx
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Копируем кастомный конфиг Nginx, если он понадобится (необязательно)
-COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
+# Копируем кастомный конфиг Nginx (заменяем default.conf)
+COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Открываем порт 80
 EXPOSE 80
