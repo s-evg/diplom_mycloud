@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    # healthcheck для проверки готовности БД
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py create_admin &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./mycloud:/app  # Для разработки, можно убрать в продакшене
+      - ./mycloud/media:/app/media  # Сохраняем загруженные файлы на хост
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db  # Имя сервиса в docker-compose
+      - DB_PORT=5432
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DEBUG=${DEBUG}
+    depends_on:
+      db:
+        condition: service_healthy
+    # restart: unless-stopped # Опционально для продакшена
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    # restart: unless-stopped # Опционально для продакшена
+
+# Объявляем именованный volume для данных PostgreSQL
+volumes:
+  postgres_data:

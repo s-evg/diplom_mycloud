@@ -12,7 +12,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -50,7 +50,10 @@ ROOT_URLCONF = 'mycloud.urls'
 #     "194.67.88.118",
 # ]
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS')
+# Убедись, что ALLOWED_HOSTS в конце файла выглядит так:
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+# Удаляем возможные пробелы вокруг хостов
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 
