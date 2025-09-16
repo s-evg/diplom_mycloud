@@ -75,7 +75,7 @@ class AuthService {
     // Авторизация пользователя
     async login(username, password) {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/token/`, {
+            const response = await fetch(`${API_BASE_URL}/auth/token/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
