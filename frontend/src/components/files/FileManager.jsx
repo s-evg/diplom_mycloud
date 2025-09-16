@@ -220,7 +220,7 @@ const FileManager = () => {
 
     // Копирование публичной ссылки
     const copyPublicLink = (linkDownload) => {
-        const url = `${API_BASE_URL}/api/storage/public/${linkDownload}/`;
+        const url = `${API_BASE_URL}/storage/public/${linkDownload}/`;
         navigator.clipboard.writeText(url);
         toast({
             title: "Ссылка скопирована",
