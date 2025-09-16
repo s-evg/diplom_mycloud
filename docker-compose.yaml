@@ -15,6 +15,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped # Опционально для продакшена
 
   backend:
     build:
@@ -41,7 +42,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # restart: unless-stopped # Опционально для продакшена
+    restart: unless-stopped # Опционально для продакшена
 
   frontend:
     build:
@@ -51,7 +52,7 @@ services:
       - "80:80"
     depends_on:
       - backend
-    # restart: unless-stopped # Опционально для продакшена
+    restart: unless-stopped # Опционально для продакшена
 
 # Объявляем именованный volume для данных PostgreSQL
 volumes:
