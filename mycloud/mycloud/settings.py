@@ -44,16 +44,12 @@ ROOT_URLCONF = 'mycloud.urls'
 
 # CORS_ORIGIN_ALLOW_ALL = True
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-#     "194.67.88.118",
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    # "194.67.88.118",
+]
 
-# Убедись, что ALLOWED_HOSTS в конце файла выглядит так:
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
-# Удаляем возможные пробелы вокруг хостов
-ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 

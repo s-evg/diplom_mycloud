@@ -1,5 +1,4 @@
-// const API_BASE_URL = "http://localhost:8000/api/auth";  // испралено
-const API_BASE_URL = "/api/auth";
+import API_BASE_URL from "./path";
 
 class AuthService {
     // Получение access токена из localStorage
@@ -48,7 +47,7 @@ class AuthService {
     // Регистрация пользователя
     async register(userData) {
         try {
-            const response = await fetch(`${API_BASE_URL}/register/`, {
+            const response = await fetch(`${API_BASE_URL}/auth/register/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -76,7 +75,7 @@ class AuthService {
     // Авторизация пользователя
     async login(username, password) {
         try {
-            const response = await fetch(`${API_BASE_URL}/token/`, {
+            const response = await fetch(`${API_BASE_URL}/api/token/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -105,13 +104,16 @@ class AuthService {
                 return false;
             }
 
-            const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ refresh: refreshToken }),
-            });
+            const response = await fetch(
+                `${API_BASE_URL}/auth/token/refresh/`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ refresh: refreshToken }),
+                }
+            );
 
             const data = await response.json();
 
