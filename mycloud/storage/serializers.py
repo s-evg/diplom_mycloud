@@ -21,7 +21,7 @@ class FileSerializer(serializers.ModelSerializer):
     def get_download_url(self, obj):
         """Публичная ссылка для внешних пользователей"""
         # return obj.get_absolute_url()
-        return f"/api/storage/public/{obj.link_download}/"
+        return f"http://176.108.254.47:8000/api/storage/public/{obj.link_download}/"
 
     def get_private_download_url(self, obj):
         """Приватная ссылка для владельца файла (через API с JWT)"""
