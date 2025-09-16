@@ -42,6 +42,7 @@ import {
 } from "react-icons/fi";
 import apiService from "../../services/apiService";
 import authService from "../../services/authService";
+import API_BASE_URL from "../../services/path";
 
 const FileManager = () => {
     const [files, setFiles] = useState([]);
@@ -232,7 +233,7 @@ const FileManager = () => {
     const downloadFile = async (fileId, fileName) => {
         try {
             const response = await fetch(
-                `http://localhost:8000/api/storage/files/${fileId}/download/`,
+                `${API_BASE_URL}/storage/files/${fileId}/download/`,
                 {
                     headers: {
                         Authorization: `Bearer ${authService.getToken()}`,
