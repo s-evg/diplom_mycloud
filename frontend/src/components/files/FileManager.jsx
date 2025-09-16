@@ -218,16 +218,81 @@ const FileManager = () => {
         }
     };
 
+    // // Копирование публичной ссылки
+    // const copyPublicLink = (linkDownload) => {
+    //     const url = `${API_BASE_URL}/storage/public/${linkDownload}/`;
+    //     navigator.clipboard.writeText(url);
+    //     toast({
+    //         title: "Ссылка скопирована",
+    //         status: "success",
+    //         duration: 2000,
+    //     });
+    // };
+
+
     // Копирование публичной ссылки
     const copyPublicLink = (linkDownload) => {
-        const url = `${API_BASE_URL}/storage/public/${linkDownload}/`;
-        navigator.clipboard.writeText(url);
-        toast({
-            title: "Ссылка скопирована",
-            status: "success",
-            duration: 2000,
-        });
+        // Формируем полный URL используя window.location
+        const url = `${window.location.origin}/api/storage/public/${linkDownload}/`;
+        
+        // Пытаемся использовать современный API
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(() => {
+                toast({
+                    title: "Ссылка скопирована",
+                    status: "success",
+                    duration: 2000,
+                });
+            }).catch(err => {
+                console.error('Ошибка копирования через navigator.clipboard: ', err);
+                fallbackCopyTextToClipboard(url);
+            });
+        } else {
+            // fallback для http или старых браузеров
+            fallbackCopyTextToClipboard(url);
+        }
     };
+
+    // Функция-запасной вариант копирования
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // Избегаем скролла
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                toast({
+                    title: "Ссылка скопирована",
+                    status: "success",
+                    duration: 2000,
+                });
+            } else {
+                throw new Error('Команда copy не удалась');
+            }
+        } catch (err) {
+            console.error('Упс, не удалось скопировать текст: ', err);
+            toast({
+                title: "Ошибка копирования",
+                description: `Скопируйте вручную: ${text}`,
+                status: "warning",
+                duration: null,
+                isClosable: true,
+            });
+        }
+        
+        document.body.removeChild(textArea);
+    }
+
 
     // Скачивание файла
     const downloadFile = async (fileId, fileName) => {
